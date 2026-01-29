@@ -12,6 +12,7 @@
   <button onclick="show('coa')">Chart of Accounts</button>
   <button onclick="show('journal')">Journal Entry</button>
   <button onclick="show('ledger')">General Ledger</button>
+  <button onclick="show('trial')">Trial Balance</button>
 </header>
 
 <section id="coa">
@@ -87,6 +88,34 @@
     <tbody id="ledger-body"></tbody>
   </table>
 </section>
+
+  <!-- TRIAL BALANCE -->
+<section id="trial" style="display:none;">
+  <h2>Trial Balance</h2>
+
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Account Name</th>
+        <th>Type</th>
+        <th style="text-align:right;">Debit</th>
+        <th style="text-align:right;">Credit</th>
+      </tr>
+    </thead>
+    <tbody id="tb-body"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><b>Total</b></td>
+        <td id="tb-total-debit" style="text-align:right;"><b>0.00</b></td>
+        <td id="tb-total-credit" style="text-align:right;"><b>0.00</b></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p id="tb-status"></p>
+</section>
+
 
 <script src="./app.js"></script>
 </body>
