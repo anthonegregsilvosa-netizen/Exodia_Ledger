@@ -1,33 +1,37 @@
-// Stable v1 checkpoint
-
-// ===== Mini QuickBooks Logic (COA + Journal + Ledger) =====
+// ===== Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const $ = (id) => document.getElementById(id);
 
 let COA = [];
 let currentCOAType = "All";
 let lines = loadLines();
+
+// Date filter state
 let filterYear = "";
 let filterMonth = "";
 
-  // Apply Year / Month filter from dropdowns
+// ==============================
+// Filters
+// ==============================
 window.applyDateFilter = function () {
-  const y = $("filter-year")?.value || "";
-  const m = $("filter-month")?.value || "";
+  const y = $("filter-year")?.value ?? "";
+  const m = $("filter-month")?.value ?? "";
 
-  filterYear = y === "All" ? "" : y;
-  filterMonth = m === "All" ? "" : m;
+  // Treat "" OR "All" as no filter (works even if your HTML uses value="")
+  filterYear = (!y || y === "All") ? "" : y;
+  filterMonth = (!m || m === "All") ? "" : m;
 
   renderCOA();
   renderLedger();
 
-  // If you have Trial Balance
   if (typeof renderTrialBalance === "function") {
     renderTrialBalance();
   }
 };
 
-// Switch tabs
+// ==============================
+// Tabs
+// ==============================
 window.show = function (view) {
   ["coa", "journal", "ledger", "trial"].forEach((v) => {
     const el = $(v);
@@ -40,13 +44,17 @@ window.show = function (view) {
   if (view === "trial") renderTrialBalance();
 };
 
-// COA filter buttons (Chart of Accounts only)
+// ==============================
+// COA buttons filter
+// ==============================
 window.filterCOA = function (type) {
   currentCOAType = type;
   renderCOA();
 };
 
-// Add a journal line row
+// ==============================
+// Journal Entry
+// ==============================
 window.addLine = function () {
   const tbody = $("je-lines");
   if (!tbody) return;
@@ -61,7 +69,7 @@ window.addLine = function () {
   opt0.textContent = "Select account...";
   select.appendChild(opt0);
 
-  // IMPORTANT: Journal Entry must show ALL accounts (not filtered)
+  // Journal dropdown should show ALL accounts, sorted by code
   const sortedForDropdown = [...COA].sort((a, b) => {
     const ca = codeNum(a.code);
     const cb = codeNum(b.code);
@@ -96,7 +104,6 @@ window.addLine = function () {
   tbody.appendChild(tr);
 };
 
-// Save Journal Entry (auto-posts to GL)
 window.saveJournal = function () {
   const date = $("je-date")?.value;
   const ref = ($("je-ref")?.value || "").trim();
@@ -149,29 +156,13 @@ window.saveJournal = function () {
 
   setStatus("Saved ✅ General Ledger updated automatically.");
   renderCOA();
-  renderLedger(); // refresh ledger view if you're on it
+  renderLedger();
   renderTrialBalance();
 };
 
-// Helpers
-function tdWrap(el, right = false) {
-  const td = document.createElement("td");
-  if (right) td.style.textAlign = "right";
-  td.appendChild(el);
-  return td;
-}
-
-function setStatus(msg) {
-  const el = $("je-status");
-  if (el) el.textContent = msg;
-}
-
-function codeNum(code) {
-  const n = Number(String(code || "").replace(/[^0-9]/g, ""));
-  return Number.isFinite(n) ? n : 999999999;
-}
-
-// Render Chart of Accounts (filter + sort)
+// ==============================
+// Render COA
+// ==============================
 function renderCOA() {
   const tbody = $("coa-body");
   if (!tbody) return;
@@ -179,14 +170,7 @@ function renderCOA() {
   tbody.innerHTML = "";
   const balances = computeBalances();
 
-  // QuickBooks type order
-  const typeOrder = {
-    Asset: 1,
-    Liability: 2,
-    Equity: 3,
-    Revenue: 4,
-    Expense: 5,
-  };
+  const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
 
   const list = COA
     .filter((a) => currentCOAType === "All" || a.type === currentCOAType)
@@ -216,13 +200,15 @@ function renderCOA() {
   });
 }
 
-// ✅ Render General Ledger (FIXED)
+// ==============================
+// Render Ledger
+// ==============================
 function renderLedger() {
   const sel = $("ledger-account");
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // Build dropdown ONCE (do NOT clear it every time)
+  // Build dropdown ONCE only (so selection works)
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -244,17 +230,21 @@ function renderLedger() {
     });
   }
 
-  // Clear ledger rows
   tbody.innerHTML = "";
-
   const accountId = sel.value;
   if (!accountId) return;
 
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
 
+  // Apply Year/Month filter to ledger lines too
   const acctLines = lines
     .filter((l) => l.accountId === accountId)
+    .filter((l) => {
+      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
+      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
+      return true;
+    })
     .sort(
       (a, b) =>
         (a.date || "").localeCompare(b.date || "") ||
@@ -284,27 +274,30 @@ function renderLedger() {
 
   if (acctLines.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="5">No transactions for this account yet.</td>`;
+    tr.innerHTML = `<td colspan="5">No transactions for this account (with current filter).</td>`;
     tbody.appendChild(tr);
   }
 }
 
-// Compute balances for COA
-function computeBalances(){
-  const normals = Object.fromEntries(COA.map(a => [a.id, a.normal]));
+// ==============================
+// Compute balances (uses filters)
+// ==============================
+function computeBalances() {
+  const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
   const balances = {};
 
   lines
-    .filter(l => {
+    .filter((l) => {
       if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
-      if (filterMonth && Number(String(l.date || "").slice(5,7)) !== Number(filterMonth)) return false;
+      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
       return true;
     })
-    .forEach(l => {
+    .forEach((l) => {
       const normal = normals[l.accountId] || "Debit";
-      const delta = (normal === "Credit")
-        ? (num(l.credit) - num(l.debit))
-        : (num(l.debit) - num(l.credit));
+      const delta =
+        normal === "Credit"
+          ? num(l.credit) - num(l.debit)
+          : num(l.debit) - num(l.credit);
 
       balances[l.accountId] = (balances[l.accountId] || 0) + delta;
     });
@@ -312,110 +305,9 @@ function computeBalances(){
   return balances;
 }
 
-    balances[l.accountId] = (balances[l.accountId] || 0) + delta;
-  });
-
-  return balances;
-}
-
-// Storage
-function loadLines() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
-}
-
-// Utils
-function parseMoney(v) {
-  const cleaned = String(v || "").replace(/[^0-9.-]/g, "");
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : 0;
-}
-function num(v) {
-  return Number(v) || 0;
-}
-function money(n) {
-  return (Number(n) || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-function randId() {
-  return Math.random().toString(16).slice(2) + Date.now().toString(16);
-}
-function esc(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-// Boot
-(async function boot() {
-  // Default date
-  const d = new Date();
-  if ($("je-date")) $("je-date").valueAsDate = d;
-
-  // Load COA JSON
-  try {
-    COA = await fetch("./data/coa.json").then((r) => r.json());
-  } catch (e) {
-    console.log("COA load failed:", e);
-    COA = [];
-  }
-
-  // Populate year filter (include current year + years from journal data)
-const yearSel = $("filter-year");
-if (yearSel) {
-  const thisYear = String(new Date().getFullYear());
-
-  const yearsFromLines = lines
-    .map(l => String(l.date || "").slice(0, 4))
-    .filter(y => y && /^\d{4}$/.test(y));
-
-  const years = Array.from(new Set([thisYear, ...yearsFromLines])).sort();
-
-  yearSel.innerHTML = `<option value="">All</option>`;
-  years.forEach(y => {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
-  });
-
-  // Optional: default to current year (comment this out if you prefer All)
-  yearSel.value = thisYear;
-  filterYear = thisYear;
-}
-  
-  years.forEach(y => {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
-  });
-}
-
-  // Prepare JE lines
-  if ($("je-lines")) {
-    $("je-lines").innerHTML = "";
-    addLine();
-    addLine();
-  }
-
-  // Render COA on load
-  renderCOA();
-})();
-
+// ==============================
+// Trial Balance
+// ==============================
 function renderTrialBalance() {
   const tbody = $("tb-body");
   const tdTotal = $("tb-total-debit");
@@ -429,7 +321,6 @@ function renderTrialBalance() {
 
   const balances = computeBalances();
 
-  // Sort by type order then code (same style as COA)
   const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
 
   const list = [...COA].sort((a, b) => {
@@ -450,7 +341,6 @@ function renderTrialBalance() {
   list.forEach((a) => {
     const bal = balances[a.id] || 0;
 
-    // Convert balance into debit/credit columns based on account normal
     let debit = 0;
     let credit = 0;
 
@@ -486,4 +376,118 @@ function renderTrialBalance() {
         ? "Balanced ✅"
         : `Not balanced ❌ (Difference: ${money(diff)})`;
   }
+}
+
+// ==============================
+// Boot
+// ==============================
+(async function boot() {
+  // Default date
+  const d = new Date();
+  if ($("je-date")) $("je-date").valueAsDate = d;
+
+  // Load COA JSON
+  try {
+    COA = await fetch("./data/coa.json").then((r) => r.json());
+  } catch (e) {
+    console.log("COA load failed:", e);
+    COA = [];
+  }
+
+  // Build Year dropdown (shows All + years found)
+  const yearSel = $("filter-year");
+  if (yearSel) {
+    const yearsFromLines = lines
+      .map((l) => String(l.date || "").slice(0, 4))
+      .filter((y) => y && /^\d{4}$/.test(y));
+
+    const years = Array.from(new Set(yearsFromLines)).sort();
+
+    yearSel.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "All";
+    optAll.textContent = "All";
+    yearSel.appendChild(optAll);
+
+    years.forEach((y) => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    });
+
+    // Default = All
+    yearSel.value = "All";
+  }
+
+  // Prepare JE lines
+  if ($("je-lines")) {
+    $("je-lines").innerHTML = "";
+    addLine();
+    addLine();
+  }
+
+  // Initial render
+  renderCOA();
+  renderLedger();
+  renderTrialBalance();
+})();
+
+// ==============================
+// Helpers / Storage / Utils
+// ==============================
+function tdWrap(el, right = false) {
+  const td = document.createElement("td");
+  if (right) td.style.textAlign = "right";
+  td.appendChild(el);
+  return td;
+}
+
+function setStatus(msg) {
+  const el = $("je-status");
+  if (el) el.textContent = msg;
+}
+
+function codeNum(code) {
+  const n = Number(String(code || "").replace(/[^0-9]/g, ""));
+  return Number.isFinite(n) ? n : 999999999;
+}
+
+function loadLines() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+}
+
+function parseMoney(v) {
+  const cleaned = String(v || "").replace(/[^0-9.-]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+function num(v) {
+  return Number(v) || 0;
+}
+function money(n) {
+  return (Number(n) || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+function randId() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+function esc(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
