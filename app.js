@@ -1,5 +1,6 @@
 // === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 
+const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
@@ -42,6 +43,8 @@ window.applyDateFilter = function () {
 // Tabs
 // ==============================
 window.show = function (view) {
+  localStorage.setItem(LAST_VIEW_KEY, view);
+
   ["coa", "journal", "ledger", "trial"].forEach((v) => {
     const el = $(v);
     if (!el) return;
@@ -399,6 +402,7 @@ function renderTrialBalance() {
 // Boot
 // ==============================
 (async function boot() {
+
   // Default date
   const d = new Date();
   if ($("je-date")) $("je-date").valueAsDate = d;
@@ -451,10 +455,10 @@ function renderTrialBalance() {
     addLine();
   }
 
-  // Initial render
-  renderCOA();
-  renderLedger();
-  renderTrialBalance();
+  // Restore last opened tab
+const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
+show(lastView);
+  
 })();
 
 // ==============================
