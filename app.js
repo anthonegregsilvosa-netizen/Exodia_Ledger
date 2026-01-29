@@ -400,31 +400,51 @@ function renderTrialBalance() {
     COA = [];
   }
 
-  // Build Year dropdown (shows All + years found)
-  const yearSel = $("filter-year");
-  if (yearSel) {
-    const yearsFromLines = lines
-      .map((l) => String(l.date || "").slice(0, 4))
-      .filter((y) => y && /^\d{4}$/.test(y));
+// Build Year dropdown (shows All + years found + current year + saved year)
+const yearSel = $("filter-year");
+const monthSel = $("filter-month");
 
-    const years = Array.from(new Set(yearsFromLines)).sort();
+const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "";
+const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
 
-    yearSel.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "All";
-    optAll.textContent = "All";
-    yearSel.appendChild(optAll);
+if (yearSel) {
+  const thisYear = String(new Date().getFullYear());
 
-    years.forEach((y) => {
-      const opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    });
+  const yearsFromLines = lines
+    .map((l) => String(l.date || "").slice(0, 4))
+    .filter((y) => y && /^\d{4}$/.test(y));
 
-    // Default = All
-    yearSel.value = "All";
-  }
+  // Include current year AND saved year so it doesn't disappear on refresh
+  const years = Array.from(new Set([thisYear, savedYear, ...yearsFromLines]))
+    .filter((y) => y && /^\d{4}$/.test(y))
+    .sort();
+
+  yearSel.innerHTML = "";
+
+  // All option
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "All";
+  yearSel.appendChild(optAll);
+
+  years.forEach((y) => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+
+  // Restore saved year (or All)
+  yearSel.value = savedYear || "";
+}
+
+// Restore saved month
+if (monthSel) {
+  monthSel.value = savedMonth || "";
+}
+
+// Apply immediately so the tables match the restored dropdowns
+applyDateFilter();
 
   // Prepare JE lines
 
