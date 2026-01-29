@@ -1,4 +1,5 @@
-// ===== Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
+// === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
+
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
@@ -15,25 +16,26 @@ let filterYear = "";
 let filterMonth = "";
 
 // ==============================
-// Filters
+// Filters (Year/Month)
 // ==============================
 window.applyDateFilter = function () {
-  const y = $("filter-year")?.value ?? "All";
+  const y = $("filter-year")?.value ?? "";
   const m = $("filter-month")?.value ?? "";
 
-  // Rules:
-  // Year "All" = no filter
-  // Month "" = no filter
+  // Treat "" OR "All" as no filter
   filterYear = (!y || y === "All") ? "" : y;
   filterMonth = (!m || m === "All") ? "" : m;
 
-  // Save selections so refresh keeps them
+  // Save raw UI values so refresh keeps them
   localStorage.setItem(FILTER_YEAR_KEY, y);
   localStorage.setItem(FILTER_MONTH_KEY, m);
 
   renderCOA();
   renderLedger();
-  if (typeof renderTrialBalance === "function") renderTrialBalance();
+
+  if (typeof renderTrialBalance === "function") {
+    renderTrialBalance();
+  }
 };
 
 // ==============================
@@ -208,7 +210,7 @@ function renderCOA() {
 }
 
 // ==============================
-// Render Ledger
+// Render Ledger (Account dropdown remembers selection)
 // ==============================
 function renderLedger() {
   const sel = $("ledger-account");
@@ -235,30 +237,24 @@ function renderLedger() {
       opt.textContent = `${a.code} - ${a.name}`;
       sel.appendChild(opt);
     });
+
+    // Restore saved ledger account selection on refresh
+    const savedAcct = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
+    if (savedAcct) sel.value = savedAcct;
   }
 
- tbody.innerHTML = "";
+  tbody.innerHTML = "";
+  const accountId = sel.value;
 
-// Restore saved account if user hasn't picked one yet
-let accountId = sel.value || "";
-if (!accountId) {
-  const savedAccountId = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
-  if (savedAccountId) {
-    sel.value = savedAccountId;
-    accountId = sel.value || "";
-  }
-}
+  // Save selected account (so refresh keeps it)
+  localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
 
-// If still none selected, stop
-if (!accountId) return;
-
-// Save current selection so refresh keeps it
-localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId);
+  if (!accountId) return;
 
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
 
-  // Apply Year/Month filter to ledger lines too
+  // Apply Year/Month filter to ledger lines
   const acctLines = lines
     .filter((l) => l.accountId === accountId)
     .filter((l) => {
@@ -415,66 +411,40 @@ function renderTrialBalance() {
     COA = [];
   }
 
-// Build Year dropdown (shows All + years found + current year + saved year)
-const yearSel = $("filter-year");
-const monthSel = $("filter-month");
+  // Build Year dropdown (shows All + years found)
+  const yearSel = $("filter-year");
+  if (yearSel) {
+    const yearsFromLines = lines
+      .map((l) => String(l.date || "").slice(0, 4))
+      .filter((y) => y && /^\d{4}$/.test(y));
 
-const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "";
-const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
+    const years = Array.from(new Set(yearsFromLines)).sort();
 
-if (yearSel) {
-  const thisYear = String(new Date().getFullYear());
+    yearSel.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "All";
+    optAll.textContent = "All";
+    yearSel.appendChild(optAll);
 
-  const yearsFromLines = lines
-    .map((l) => String(l.date || "").slice(0, 4))
-    .filter((y) => y && /^\d{4}$/.test(y));
+    years.forEach((y) => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    });
 
-  // Include current year AND saved year so it doesn't disappear on refresh
-  const years = Array.from(new Set([thisYear, savedYear, ...yearsFromLines]))
-    .filter((y) => y && /^\d{4}$/.test(y))
-    .sort();
+    // Restore saved Year/Month UI values
+    const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
+    const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
 
-  yearSel.innerHTML = "";
+    if ($("filter-year")) $("filter-year").value = savedYear;
+    if ($("filter-month")) $("filter-month").value = savedMonth;
 
-  // All option
-  const optAll = document.createElement("option");
-  optAll.value = "";
-  optAll.textContent = "All";
-  yearSel.appendChild(optAll);
-
-  years.forEach((y) => {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
-  });
-
-  // Restore saved year (or All)
-  yearSel.value = savedYear || "";
-}
-
-// Restore saved month
-if (monthSel) {
-  monthSel.value = savedMonth || "";
-}
-
-// Apply immediately so the tables match the restored dropdowns
-applyDateFilter();
+    // Apply immediately so the data matches the restored UI
+    applyDateFilter();
+  }
 
   // Prepare JE lines
-
-// ==============================
-  // Restore saved date filters
-  // ==============================
-  const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
-  const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
-
-  if ($("filter-year")) $("filter-year").value = savedYear;
-  if ($("filter-month")) $("filter-month").value = savedMonth;
-
-  // Apply immediately so data matches UI
-  applyDateFilter();
-  
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
     addLine();
