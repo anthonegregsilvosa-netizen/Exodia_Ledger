@@ -16,6 +16,17 @@
 
 <section id="coa">
   <h2>Chart of Accounts</h2>
+
+  <!-- COA TYPE FILTER BUTTONS -->
+  <div style="margin-bottom:10px;">
+    <button onclick="filterCOA('All')">All</button>
+    <button onclick="filterCOA('Asset')">Assets</button>
+    <button onclick="filterCOA('Liability')">Liabilities</button>
+    <button onclick="filterCOA('Equity')">Equity</button>
+    <button onclick="filterCOA('Revenue')">Revenue</button>
+    <button onclick="filterCOA('Expense')">Expenses</button>
+  </div>
+
   <table border="1" cellpadding="6">
     <thead>
       <tr>
