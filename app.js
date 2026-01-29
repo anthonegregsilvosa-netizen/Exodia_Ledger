@@ -2,6 +2,7 @@
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
+const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 
 const $ = (id) => document.getElementById(id);
 
@@ -236,9 +237,23 @@ function renderLedger() {
     });
   }
 
-  tbody.innerHTML = "";
-  const accountId = sel.value;
-  if (!accountId) return;
+ tbody.innerHTML = "";
+
+// Restore saved account if user hasn't picked one yet
+let accountId = sel.value || "";
+if (!accountId) {
+  const savedAccountId = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
+  if (savedAccountId) {
+    sel.value = savedAccountId;
+    accountId = sel.value || "";
+  }
+}
+
+// If still none selected, stop
+if (!accountId) return;
+
+// Save current selection so refresh keeps it
+localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId);
 
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
