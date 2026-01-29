@@ -1,5 +1,8 @@
 // ===== Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
+const FILTER_YEAR_KEY = "exodia.filterYear";
+const FILTER_MONTH_KEY = "exodia.filterMonth";
+
 const $ = (id) => document.getElementById(id);
 
 let COA = [];
@@ -11,15 +14,19 @@ let filterYear = "";
 let filterMonth = "";
 
 // ==============================
-// Filters
+// Filters (Year / Month)
 // ==============================
 window.applyDateFilter = function () {
   const y = $("filter-year")?.value ?? "";
   const m = $("filter-month")?.value ?? "";
 
-  // Treat "" OR "All" as no filter (works even if your HTML uses value="")
-  filterYear = (!y || y === "All") ? "" : y;
-  filterMonth = (!m || m === "All") ? "" : m;
+  // Your HTML uses value="" for All, so "" means no filter
+  filterYear = y || "";
+  filterMonth = m || "";
+
+  // Persist filter so it stays after refresh
+  localStorage.setItem(FILTER_YEAR_KEY, filterYear);
+  localStorage.setItem(FILTER_MONTH_KEY, filterMonth);
 
   renderCOA();
   renderLedger();
@@ -158,6 +165,9 @@ window.saveJournal = function () {
   renderCOA();
   renderLedger();
   renderTrialBalance();
+
+  // Update year dropdown (in case new year was added)
+  rebuildYearDropdown();
 };
 
 // ==============================
@@ -208,7 +218,7 @@ function renderLedger() {
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // Build dropdown ONCE only (so selection works)
+  // Build dropdown ONCE (so selection works)
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -237,26 +247,17 @@ function renderLedger() {
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
 
-  // Apply Year/Month filter to ledger lines too
-
   const acctLines = lines
-  .filter(l => {
-    if (l.accountId !== accountId) return false;
+    .filter((l) => {
+      if (l.accountId !== accountId) return false;
 
-    // apply year filter
-    if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
+      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
 
-    // apply month filter
-    if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
+      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
 
-    return true;
-  })
-  .sort(
-    (a, b) =>
-      (a.date || "").localeCompare(b.date || "") ||
-      (a.ref || "").localeCompare(b.ref || "")
-  );
-
+      return true;
+    })
+    .sort(
       (a, b) =>
         (a.date || "").localeCompare(b.date || "") ||
         (a.ref || "").localeCompare(b.ref || "")
@@ -390,6 +391,32 @@ function renderTrialBalance() {
 }
 
 // ==============================
+// Year dropdown builder + restore saved filters
+// ==============================
+function rebuildYearDropdown() {
+  const yearSel = $("filter-year");
+  if (!yearSel) return;
+
+  const thisYear = String(new Date().getFullYear());
+
+  const yearsFromLines = lines
+    .map((l) => String(l.date || "").slice(0, 4))
+    .filter((y) => y && /^\d{4}$/.test(y));
+
+  const years = Array.from(new Set([thisYear, ...yearsFromLines])).sort();
+
+  // value="" means All (matches your HTML month select style)
+  yearSel.innerHTML = `<option value="">All</option>`;
+
+  years.forEach((y) => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+}
+
+// ==============================
 // Boot
 // ==============================
 (async function boot() {
@@ -405,31 +432,15 @@ function renderTrialBalance() {
     COA = [];
   }
 
-  // Build Year dropdown (shows All + years found)
-  const yearSel = $("filter-year");
-  if (yearSel) {
-    const yearsFromLines = lines
-      .map((l) => String(l.date || "").slice(0, 4))
-      .filter((y) => y && /^\d{4}$/.test(y));
+  // Build Year dropdown
+  rebuildYearDropdown();
 
-    const years = Array.from(new Set(yearsFromLines)).sort();
+  // Restore saved filters
+  filterYear = localStorage.getItem(FILTER_YEAR_KEY) || "";
+  filterMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
 
-    yearSel.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "All";
-    optAll.textContent = "All";
-    yearSel.appendChild(optAll);
-
-    years.forEach((y) => {
-      const opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    });
-
-    // Default = All
-    yearSel.value = "All";
-  }
+  if ($("filter-year")) $("filter-year").value = filterYear;
+  if ($("filter-month")) $("filter-month").value = filterMonth;
 
   // Prepare JE lines
   if ($("je-lines")) {
@@ -482,18 +493,22 @@ function parseMoney(v) {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
 }
+
 function num(v) {
   return Number(v) || 0;
 }
+
 function money(n) {
   return (Number(n) || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
+
 function randId() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
+
 function esc(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")
