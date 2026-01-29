@@ -127,7 +127,7 @@ window.saveJournal = function () {
 
   setStatus("Saved ✅ General Ledger updated automatically.");
   renderCOA();
-  renderLedger();
+  renderLedger(); // refresh ledger view if you're on it
 };
 
 // Helpers
@@ -168,17 +168,14 @@ function renderCOA() {
   const list = COA
     .filter((a) => currentCOAType === "All" || a.type === currentCOAType)
     .sort((a, b) => {
-      // 1) type order
       const ta = typeOrder[a.type] ?? 99;
       const tb = typeOrder[b.type] ?? 99;
       if (ta !== tb) return ta - tb;
 
-      // 2) numeric code
       const ca = codeNum(a.code);
       const cb = codeNum(b.code);
       if (ca !== cb) return ca - cb;
 
-      // 3) name
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
 
@@ -196,13 +193,13 @@ function renderCOA() {
   });
 }
 
-// Render General Ledger
+// ✅ Render General Ledger (FIXED)
 function renderLedger() {
   const sel = $("ledger-account");
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // Build dropdown ONCE (do not reset it every time)
+  // Build dropdown ONCE (do NOT clear it every time)
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -224,6 +221,7 @@ function renderLedger() {
     });
   }
 
+  // Clear ledger rows
   tbody.innerHTML = "";
 
   const accountId = sel.value;
@@ -266,34 +264,6 @@ function renderLedger() {
     tr.innerHTML = `<td colspan="5">No transactions for this account yet.</td>`;
     tbody.appendChild(tr);
   }
-}
-
-
-  // Build dropdown every time (safe even if COA reloads)
-  sel.innerHTML = "";
-  const o0 = document.createElement("option");
-  o0.value = "";
-  o0.textContent = "Select account...";
-  sel.appendChild(o0);
-
-  const sorted = [...COA].sort((a, b) => {
-    const ca = codeNum(a.code);
-    const cb = codeNum(b.code);
-    if (ca !== cb) return ca - cb;
-    return String(a.name || "").localeCompare(String(b.name || ""));
-  });
-
-  sorted.forEach((a) => {
-    const opt = document.createElement("option");
-    opt.value = a.id;
-    opt.textContent = `${a.code} - ${a.name}`;
-    sel.appendChild(opt);
-  });
-
-  // If user didn’t pick an account, stop here
-  tbody.innerHTML = "";
-  const accountId = sel.value;
-  if (!accountId) return;
 }
 
 // Compute balances for COA
