@@ -238,14 +238,25 @@ function renderLedger() {
   const normal = acct?.normal || "Debit";
 
   // Apply Year/Month filter to ledger lines too
+
   const acctLines = lines
-    .filter((l) => l.accountId === accountId)
-    .filter((l) => {
-      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
-      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
-      return true;
-    })
-    .sort(
+  .filter(l => {
+    if (l.accountId !== accountId) return false;
+
+    // apply year filter
+    if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
+
+    // apply month filter
+    if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
+
+    return true;
+  })
+  .sort(
+    (a, b) =>
+      (a.date || "").localeCompare(b.date || "") ||
+      (a.ref || "").localeCompare(b.ref || "")
+  );
+
       (a, b) =>
         (a.date || "").localeCompare(b.date || "") ||
         (a.ref || "").localeCompare(b.ref || "")
