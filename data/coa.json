@@ -1,0 +1,6 @@
+[
+  { "id": "1001", "code": "1001", "name": "Cash on Hand", "type": "Asset", "normal": "Debit" },
+  { "id": "2001", "code": "2001", "name": "Accounts Payable", "type": "Liability", "normal": "Credit" },
+  { "id": "3000", "code": "3000", "name": "Owner’s Equity", "type": "Equity", "normal": "Credit" },
+  { "id": "5000", "code": "5000", "name": "Internet Expense", "type": "Expense", "normal": "Debit" }
+]
