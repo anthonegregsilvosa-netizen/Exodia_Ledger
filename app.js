@@ -140,6 +140,56 @@ function renderCOA() {
 
   const balances = computeBalances();
 
+  // Type order like QuickBooks
+  const typeOrder = {
+    "Asset": 1,
+    "Liability": 2,
+    "Equity": 3,
+    "Revenue": 4,
+    "Expense": 5
+  };
+
+  // helper to sort codes numerically when possible
+  const codeNum = (code) => {
+    const n = Number(String(code || "").replace(/[^0-9]/g, ""));
+    return Number.isFinite(n) ? n : 999999999;
+  };
+
+  COA
+    // filter buttons
+    .filter(a => currentCOAType === "All" || a.type === currentCOAType)
+    // sort by type then by code
+    .sort((a, b) => {
+      const ta = typeOrder[a.type] ?? 99;
+      const tb = typeOrder[b.type] ?? 99;
+      if (ta !== tb) return ta - tb;
+
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+
+      // fallback sort by name
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    })
+    .forEach(a => {
+      const bal = balances[a.id] || 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${esc(a.code)}</td>
+        <td>${esc(a.name)}</td>
+        <td>${esc(a.type)}</td>
+        <td>${esc(a.normal)}</td>
+        <td style="text-align:right;">${money(bal)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+}
+
+  const tbody = $("coa-body");
+  tbody.innerHTML = "";
+
+  const balances = computeBalances();
+
   COA
     .filter(a => currentCOAType === "All" || a.type === currentCOAType)
     .forEach(a => {
