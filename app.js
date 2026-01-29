@@ -7,6 +7,19 @@ const $ = (id) => document.getElementById(id);
 let COA = [];
 let currentCOAType = "All";
 let lines = loadLines();
+let filterYear = "";
+let filterMonth = "";
+
+window.applyDateFilter = function () {
+  filterYear = $("filter-year")?.value || "";
+  filterMonth = $("filter-month")?.value || "";
+
+  renderCOA();
+  renderLedger();
+  if (typeof renderTrialBalance === "function") {
+    renderTrialBalance();
+  }
+};
 
 // Switch tabs
 window.show = function (view) {
@@ -271,16 +284,27 @@ function renderLedger() {
 }
 
 // Compute balances for COA
-function computeBalances() {
-  const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
+function computeBalances(){
+  const normals = Object.fromEntries(COA.map(a => [a.id, a.normal]));
   const balances = {};
 
-  lines.forEach((l) => {
-    const normal = normals[l.accountId] || "Debit";
-    const delta =
-      normal === "Credit"
-        ? num(l.credit) - num(l.debit)
-        : num(l.debit) - num(l.credit);
+  lines
+    .filter(l => {
+      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
+      if (filterMonth && Number(String(l.date || "").slice(5,7)) !== Number(filterMonth)) return false;
+      return true;
+    })
+    .forEach(l => {
+      const normal = normals[l.accountId] || "Debit";
+      const delta = (normal === "Credit")
+        ? (num(l.credit) - num(l.debit))
+        : (num(l.debit) - num(l.credit));
+
+      balances[l.accountId] = (balances[l.accountId] || 0) + delta;
+    });
+
+  return balances;
+}
 
     balances[l.accountId] = (balances[l.accountId] || 0) + delta;
   });
@@ -342,6 +366,22 @@ function esc(s) {
     console.log("COA load failed:", e);
     COA = [];
   }
+
+  // Populate year filter from journal data
+const yearSel = $("filter-year");
+if (yearSel) {
+  const years = [...new Set(
+    lines.map(l => l.date?.slice(0, 4)).filter(Boolean)
+  )].sort();
+
+  yearSel.innerHTML = `<option value="">All</option>`;
+  years.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+}
 
   // Prepare JE lines
   if ($("je-lines")) {
