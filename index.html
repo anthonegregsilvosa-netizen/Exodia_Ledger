@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini QuickBooks</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<header style="padding:12px; border-bottom:1px solid #ccc;">
+  <button onclick="show('coa')">Chart of Accounts</button>
+  <button onclick="show('journal')">Journal Entry</button>
+  <button onclick="show('ledger')">General Ledger</button>
+</header>
+
+<section id="coa">
+  <h2>Chart of Accounts</h2>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Account Name</th>
+        <th>Type</th>
+        <th>Normal</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+    <tbody id="coa-body"></tbody>
+  </table>
+</section>
+
+<section id="journal" style="display:none;">
+  <h2>Journal Entry</h2>
+
+  <label>Date:
+    <input type="date" id="je-date">
+  </label><br><br>
+
+  <label>Ref No:
+    <input type="text" id="je-ref">
+  </label><br><br>
+
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th>Debit</th>
+        <th>Credit</th>
+      </tr>
+    </thead>
+    <tbody id="je-lines"></tbody>
+  </table>
+
+  <button onclick="addLine()">Add Line</button>
+  <button onclick="saveJournal()">Save Journal Entry</button>
+
+  <p id="je-status"></p>
+</section>
+
+<section id="ledger" style="display:none;">
+  <h2>General Ledger</h2>
+
+  <select id="ledger-account" onchange="renderLedger()"></select>
+
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Ref</th>
+        <th>Debit</th>
+        <th>Credit</th>
+        <th>Running Balance</th>
+      </tr>
+    </thead>
+    <tbody id="ledger-body"></tbody>
+  </table>
+</section>
+
+<script src="./app.js"></script>
+</body>
+</html>
