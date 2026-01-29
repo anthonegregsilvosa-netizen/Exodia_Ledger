@@ -1,3 +1,5 @@
+// Stable v1 checkpoint
+
 // ===== Mini QuickBooks Logic (COA + Journal + Ledger) =====
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const $ = (id) => document.getElementById(id);
