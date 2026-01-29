@@ -8,7 +8,7 @@ let lines = loadLines();
 
 // Switch tabs
 window.show = function (view) {
-  ["coa", "journal", "ledger"].forEach((v) => {
+  ["coa", "journal", "ledger", "trial"].forEach((v) => {
     const el = $(v);
     if (!el) return;
     el.style.display = v === view ? "block" : "none";
@@ -16,6 +16,7 @@ window.show = function (view) {
 
   if (view === "coa") renderCOA();
   if (view === "ledger") renderLedger();
+  if (view === "trial") renderTrialBalance();
 };
 
 // COA filter buttons (Chart of Accounts only)
@@ -349,3 +350,75 @@ function esc(s) {
   // Render COA on load
   renderCOA();
 })();
+
+function renderTrialBalance() {
+  const tbody = $("tb-body");
+  const tdTotal = $("tb-total-debit");
+  const tcTotal = $("tb-total-credit");
+  const status = $("tb-status");
+
+  if (!tbody || !tdTotal || !tcTotal) return;
+
+  tbody.innerHTML = "";
+  if (status) status.textContent = "";
+
+  const balances = computeBalances();
+
+  // Sort by type order then code (same style as COA)
+  const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
+
+  const list = [...COA].sort((a, b) => {
+    const ta = typeOrder[a.type] ?? 99;
+    const tb = typeOrder[b.type] ?? 99;
+    if (ta !== tb) return ta - tb;
+
+    const ca = codeNum(a.code);
+    const cb = codeNum(b.code);
+    if (ca !== cb) return ca - cb;
+
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  list.forEach((a) => {
+    const bal = balances[a.id] || 0;
+
+    // Convert balance into debit/credit columns based on account normal
+    let debit = 0;
+    let credit = 0;
+
+    if (a.normal === "Debit") {
+      debit = Math.max(bal, 0);
+      credit = Math.max(-bal, 0);
+    } else {
+      credit = Math.max(bal, 0);
+      debit = Math.max(-bal, 0);
+    }
+
+    totalDebit += debit;
+    totalCredit += credit;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${esc(a.code)}</td>
+      <td>${esc(a.name)}</td>
+      <td>${esc(a.type)}</td>
+      <td style="text-align:right;">${money(debit)}</td>
+      <td style="text-align:right;">${money(credit)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tdTotal.textContent = money(totalDebit);
+  tcTotal.textContent = money(totalCredit);
+
+  const diff = Math.abs(totalDebit - totalCredit);
+  if (status) {
+    status.textContent =
+      diff < 0.00001
+        ? "Balanced ✅"
+        : `Not balanced ❌ (Difference: ${money(diff)})`;
+  }
+}
