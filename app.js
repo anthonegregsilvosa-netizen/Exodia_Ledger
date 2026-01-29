@@ -202,6 +202,73 @@ function renderLedger() {
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
+  // Build dropdown ONCE (do not reset it every time)
+  if (sel.options.length === 0) {
+    const o0 = document.createElement("option");
+    o0.value = "";
+    o0.textContent = "Select account...";
+    sel.appendChild(o0);
+
+    const sorted = [...COA].sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+    sorted.forEach((a) => {
+      const opt = document.createElement("option");
+      opt.value = a.id;
+      opt.textContent = `${a.code} - ${a.name}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  tbody.innerHTML = "";
+
+  const accountId = sel.value;
+  if (!accountId) return;
+
+  const acct = COA.find((a) => a.id === accountId);
+  const normal = acct?.normal || "Debit";
+
+  const acctLines = lines
+    .filter((l) => l.accountId === accountId)
+    .sort(
+      (a, b) =>
+        (a.date || "").localeCompare(b.date || "") ||
+        (a.ref || "").localeCompare(b.ref || "")
+    );
+
+  let running = 0;
+
+  acctLines.forEach((l) => {
+    const delta =
+      normal === "Credit"
+        ? num(l.credit) - num(l.debit)
+        : num(l.debit) - num(l.credit);
+
+    running += delta;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${esc(l.date)}</td>
+      <td>${esc(l.ref)}</td>
+      <td style="text-align:right;">${money(l.debit)}</td>
+      <td style="text-align:right;">${money(l.credit)}</td>
+      <td style="text-align:right;">${money(running)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (acctLines.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="5">No transactions for this account yet.</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+
   // Build dropdown every time (safe even if COA reloads)
   sel.innerHTML = "";
   const o0 = document.createElement("option");
