@@ -367,14 +367,30 @@ function esc(s) {
     COA = [];
   }
 
-  // Populate year filter from journal data
+  // Populate year filter (include current year + years from journal data)
 const yearSel = $("filter-year");
 if (yearSel) {
-  const years = [...new Set(
-    lines.map(l => l.date?.slice(0, 4)).filter(Boolean)
-  )].sort();
+  const thisYear = String(new Date().getFullYear());
+
+  const yearsFromLines = lines
+    .map(l => String(l.date || "").slice(0, 4))
+    .filter(y => y && /^\d{4}$/.test(y));
+
+  const years = Array.from(new Set([thisYear, ...yearsFromLines])).sort();
 
   yearSel.innerHTML = `<option value="">All</option>`;
+  years.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+
+  // Optional: default to current year (comment this out if you prefer All)
+  yearSel.value = thisYear;
+  filterYear = thisYear;
+}
+  
   years.forEach(y => {
     const opt = document.createElement("option");
     opt.value = y;
