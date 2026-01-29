@@ -10,12 +10,18 @@ let lines = loadLines();
 let filterYear = "";
 let filterMonth = "";
 
+  // Apply Year / Month filter from dropdowns
 window.applyDateFilter = function () {
-  filterYear = $("filter-year")?.value || "";
-  filterMonth = $("filter-month")?.value || "";
+  const y = $("filter-year")?.value || "";
+  const m = $("filter-month")?.value || "";
+
+  filterYear = y === "All" ? "" : y;
+  filterMonth = m === "All" ? "" : m;
 
   renderCOA();
   renderLedger();
+
+  // If you have Trial Balance
   if (typeof renderTrialBalance === "function") {
     renderTrialBalance();
   }
