@@ -1,5 +1,8 @@
 // ===== Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
+const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
+const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
+
 const $ = (id) => document.getElementById(id);
 
 let COA = [];
@@ -14,20 +17,24 @@ let filterMonth = "";
 // Filters
 // ==============================
 window.applyDateFilter = function () {
-  const y = $("filter-year")?.value ?? "";
+  const y = $("filter-year")?.value ?? "All";
   const m = $("filter-month")?.value ?? "";
 
-  // Treat "" OR "All" as no filter (works even if your HTML uses value="")
+  // Rules:
+  // Year "All" = no filter
+  // Month "" = no filter
   filterYear = (!y || y === "All") ? "" : y;
   filterMonth = (!m || m === "All") ? "" : m;
 
+  // Save selections so refresh keeps them
+  localStorage.setItem(FILTER_YEAR_KEY, y);
+  localStorage.setItem(FILTER_MONTH_KEY, m);
+
   renderCOA();
   renderLedger();
-
-  if (typeof renderTrialBalance === "function") {
-    renderTrialBalance();
-  }
+  if (typeof renderTrialBalance === "function") renderTrialBalance();
 };
+
 
 // ==============================
 // Tabs
@@ -421,6 +428,19 @@ function renderTrialBalance() {
   }
 
   // Prepare JE lines
+
+// ==============================
+  // Restore saved date filters
+  // ==============================
+  const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
+  const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
+
+  if ($("filter-year")) $("filter-year").value = savedYear;
+  if ($("filter-month")) $("filter-month").value = savedMonth;
+
+  // Apply immediately so data matches UI
+  applyDateFilter();
+  
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
     addLine();
