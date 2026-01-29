@@ -35,7 +35,6 @@ window.applyDateFilter = function () {
   if (typeof renderTrialBalance === "function") renderTrialBalance();
 };
 
-
 // ==============================
 // Tabs
 // ==============================
