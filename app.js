@@ -129,6 +129,7 @@ window.saveJournal = function () {
   setStatus("Saved ✅ General Ledger updated automatically.");
   renderCOA();
   renderLedger(); // refresh ledger view if you're on it
+  renderTrialBalance();
 };
 
 // Helpers
