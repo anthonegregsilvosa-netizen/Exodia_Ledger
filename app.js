@@ -3,8 +3,10 @@ const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 const $ = (id) => document.getElementById(id);
 
 let COA = [];
+let currentCOAType = "All";
 let lines = loadLines();
 
+// Switch tabs
 window.show = function(view) {
   ["coa","journal","ledger"].forEach(v => {
     const el = $(v);
@@ -15,6 +17,13 @@ window.show = function(view) {
   if (view === "ledger") renderLedger();
 };
 
+// COA filter (Chart of Accounts buttons)
+window.filterCOA = function(type){
+  currentCOAType = type;
+  renderCOA();
+};
+
+// Add a journal line row
 window.addLine = function() {
   const tbody = $("je-lines");
   const tr = document.createElement("tr");
@@ -27,6 +36,7 @@ window.addLine = function() {
   opt0.textContent = "Select account...";
   select.appendChild(opt0);
 
+  // IMPORTANT: Journal Entry should list ALL accounts (not filtered)
   COA.forEach(a => {
     const opt = document.createElement("option");
     opt.value = a.id;
@@ -44,7 +54,9 @@ window.addLine = function() {
 
   const delBtn = document.createElement("button");
   delBtn.textContent = "X";
-  delBtn.onclick = () => tr.remove();
+  delBtn.onclick = () => {
+    tr.remove();
+  };
 
   tr.appendChild(tdWrap(select));
   tr.appendChild(tdWrap(debit, true));
@@ -54,6 +66,7 @@ window.addLine = function() {
   tbody.appendChild(tr);
 };
 
+// Save Journal Entry (posts to ledger automatically)
 window.saveJournal = function() {
   const date = $("je-date").value;
   const ref = ($("je-ref").value || "").trim();
@@ -70,6 +83,7 @@ window.saveJournal = function() {
   rows.forEach(r => {
     const sel = r.querySelector("select");
     const inputs = r.querySelectorAll("input");
+
     const accountId = sel?.value || "";
     const d = parseMoney(inputs[0]?.value);
     const c = parseMoney(inputs[1]?.value);
@@ -98,7 +112,7 @@ window.saveJournal = function() {
   lines = lines.concat(newLines);
   persist();
 
-  // reset journal lines table
+  // Reset journal lines table
   $("je-lines").innerHTML = "";
   addLine(); addLine();
 
@@ -107,6 +121,7 @@ window.saveJournal = function() {
   renderLedger();
 };
 
+// Helpers for table cells
 function tdWrap(el, right=false){
   const td = document.createElement("td");
   if (right) td.style.textAlign = "right";
@@ -118,31 +133,35 @@ function setStatus(msg){
   $("je-status").textContent = msg;
 }
 
+// Render Chart of Accounts (FILTERED by type buttons)
 function renderCOA() {
   const tbody = $("coa-body");
   tbody.innerHTML = "";
 
   const balances = computeBalances();
 
-  COA.forEach(a => {
-    const bal = balances[a.id] || 0;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${esc(a.code)}</td>
-      <td>${esc(a.name)}</td>
-      <td>${esc(a.type)}</td>
-      <td>${esc(a.normal)}</td>
-      <td style="text-align:right;">${money(bal)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+  COA
+    .filter(a => currentCOAType === "All" || a.type === currentCOAType)
+    .forEach(a => {
+      const bal = balances[a.id] || 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${esc(a.code)}</td>
+        <td>${esc(a.name)}</td>
+        <td>${esc(a.type)}</td>
+        <td>${esc(a.normal)}</td>
+        <td style="text-align:right;">${money(bal)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
 }
 
+// Render General Ledger (per selected account)
 function renderLedger() {
   const sel = $("ledger-account");
   const tbody = $("ledger-body");
 
-  // build dropdown once
+  // Build dropdown once
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -189,19 +208,24 @@ function renderLedger() {
   });
 }
 
+// Compute balances for COA display
 function computeBalances(){
   const normals = Object.fromEntries(COA.map(a => [a.id, a.normal]));
   const balances = {};
+
   lines.forEach(l => {
     const normal = normals[l.accountId] || "Debit";
     const delta = (normal === "Credit")
       ? (num(l.credit) - num(l.debit))
       : (num(l.debit) - num(l.credit));
+
     balances[l.accountId] = (balances[l.accountId] || 0) + delta;
   });
+
   return balances;
 }
 
+// Storage
 function loadLines(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -215,6 +239,7 @@ function persist(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
 }
 
+// Utils
 function parseMoney(v){
   const cleaned = String(v||"").replace(/[^0-9.-]/g, "");
   const n = Number(cleaned);
@@ -227,17 +252,20 @@ function randId(){
 }
 function esc(s){
   return String(s ?? "")
-    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 // ===== Load COA then initialize =====
 (async function boot(){
-  // create default date
+  // Default date
   const d = new Date();
   if ($("je-date")) $("je-date").valueAsDate = d;
 
-  // load chart of accounts JSON
+  // Load COA JSON
   try{
     COA = await fetch("./data/coa.json").then(r => r.json());
   } catch(e){
@@ -245,7 +273,7 @@ function esc(s){
     COA = [];
   }
 
-  // prepare journal lines
+  // Prepare journal lines
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
     addLine(); addLine();
