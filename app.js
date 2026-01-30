@@ -6,7 +6,7 @@ const STORAGE_KEY = "exodiaLedger.journalLines.v1";
 // ==============================
 // Supabase Setup
 // ==============================
-const SUPABASE_URL = https://vtglfaeyvmciieuntzhs.supabase.co"; // example: https://xxxx.supabase.co
+const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co"; // example: https://xxxx.supabase.co
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo"; // anon public key ONLY
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
