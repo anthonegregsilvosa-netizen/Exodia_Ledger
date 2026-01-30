@@ -1,15 +1,55 @@
 // === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 
+// ==============================
+// Local UI memory keys
+// ==============================
 const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
-const STORAGE_KEY = "exodiaLedger.journalLines.v1";
+const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
+const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
+const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 
 // ==============================
 // Supabase Setup
 // ==============================
-const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co"; // example: https://xxxx.supabase.co
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo"; // anon public key ONLY
+const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==============================
+// DOM helper
+// ==============================
+const $ = (id) => document.getElementById(id);
+
+// ==============================
+// App state
+// ==============================
+let COA = [];
+let currentCOAType = "All";
+let lines = []; // loaded from Supabase
+
+// Date filter state
+let filterYear = "";
+let filterMonth = "";
+
+// ==============================
+// Supabase helpers
+// ==============================
+function normalizeLine(row) {
+  // Supports BOTH schemas:
+  // - accountId (camelCase)
+  // - account_id (snake_case)
+  return {
+    id: row.id,
+    date: row.date,
+    ref: row.ref,
+    accountId: row.accountId ?? row.account_id ?? "",
+    debit: Number(row.debit || 0),
+    credit: Number(row.credit || 0),
+    created_at: row.created_at,
+  };
+}
 
 async function sbFetchJournalLines() {
   const { data, error } = await sb
@@ -18,27 +58,59 @@ async function sbFetchJournalLines() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(normalizeLine);
 }
 
-async function sbInsertJournalLines(rows) {
-  const { error } = await sb.from("journal_lines").insert(rows);
-  if (error) throw error;
+function toDbRow(line) {
+  // Try sending in camelCase first (accountId).
+  // If your DB is snake_case, we'll retry insert with account_id.
+  return {
+    id: line.id,
+    date: line.date,
+    ref: line.ref,
+    accountId: line.accountId,
+    debit: line.debit,
+    credit: line.credit,
+  };
 }
 
-const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
-const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
-const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
+function toDbRowSnake(line) {
+  return {
+    id: line.id,
+    date: line.date,
+    ref: line.ref,
+    account_id: line.accountId,
+    debit: line.debit,
+    credit: line.credit,
+  };
+}
 
-const $ = (id) => document.getElementById(id);
+async function sbInsertJournalLines(linesToInsert) {
+  // Attempt 1: insert with accountId
+  const rows1 = linesToInsert.map(toDbRow);
+  let { error } = await sb.from("journal_lines").insert(rows1);
 
-let COA = [];
-let currentCOAType = "All";
-let lines = loadLines();
+  if (!error) return;
 
-// Date filter state
-let filterYear = "";
-let filterMonth = "";
+  // Attempt 2: insert with account_id (if schema is snake_case)
+  const rows2 = linesToInsert.map(toDbRowSnake);
+  const res2 = await sb.from("journal_lines").insert(rows2);
+
+  if (res2.error) {
+    // Show the real error in console to debug
+    console.error("Supabase insert error:", res2.error);
+    throw res2.error;
+  }
+}
+
+async function loadLines() {
+  try {
+    return await sbFetchJournalLines();
+  } catch (e) {
+    console.error("loadLines failed:", e);
+    return [];
+  }
+}
 
 // ==============================
 // Filters (Year/Month)
@@ -57,10 +129,7 @@ window.applyDateFilter = function () {
 
   renderCOA();
   renderLedger();
-
-  if (typeof renderTrialBalance === "function") {
-    renderTrialBalance();
-  }
+  renderTrialBalance?.();
 };
 
 // ==============================
@@ -77,7 +146,7 @@ window.show = function (view) {
 
   if (view === "coa") renderCOA();
   if (view === "ledger") renderLedger();
-  if (view === "trial") renderTrialBalance();
+  if (view === "trial") renderTrialBalance?.();
 };
 
 // ==============================
@@ -140,7 +209,7 @@ window.addLine = function () {
   tbody.appendChild(tr);
 };
 
-window.saveJournal = function () {
+window.saveJournal = async function () {
   const date = $("je-date")?.value;
   const ref = ($("je-ref")?.value || "").trim();
 
@@ -166,9 +235,8 @@ window.saveJournal = function () {
 
     totalDebit += d;
     totalCredit += c;
-    
+
     newLines.push({
-      
       id: randId(),
       date,
       ref,
@@ -177,26 +245,32 @@ window.saveJournal = function () {
       credit: c,
     });
   });
-  
+
   if (newLines.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
     return setStatus("Not balanced: Total Debit must equal Total Credit.");
   }
 
-  await sbInsertJournalLines(newLines);   // save to Supabase
-lines = await loadLines();              // reload from DB
-renderLedger();
-renderTrialBalance?.();
+  try {
+    // Save to Supabase
+    await sbInsertJournalLines(newLines);
 
-  // Reset JE table
-  $("je-lines").innerHTML = "";
-  addLine();
-  addLine();
+    // Reload from Supabase (single source of truth)
+    lines = await loadLines();
 
-  setStatus("Saved ✅ General Ledger updated automatically.");
-  renderCOA();
-  renderLedger();
-  renderTrialBalance();
+    // Reset JE table
+    $("je-lines").innerHTML = "";
+    addLine();
+    addLine();
+
+    setStatus("Saved ✅ General Ledger updated automatically.");
+    renderCOA();
+    renderLedger();
+    renderTrialBalance?.();
+  } catch (e) {
+    console.error(e);
+    setStatus("Save failed ❌ Check console + Supabase policy/table columns.");
+  }
 };
 
 // ==============================
@@ -429,7 +503,6 @@ function renderTrialBalance() {
 // Boot
 // ==============================
 (async function boot() {
-
   // Default date
   const d = new Date();
   if ($("je-date")) $("je-date").valueAsDate = d;
@@ -441,6 +514,9 @@ function renderTrialBalance() {
     console.log("COA load failed:", e);
     COA = [];
   }
+
+  // ✅ Load lines from Supabase
+  lines = await loadLines();
 
   // Build Year dropdown (shows All + years found)
   const yearSel = $("filter-year");
@@ -483,13 +559,12 @@ function renderTrialBalance() {
   }
 
   // Restore last opened tab
-const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
-show(lastView);
-  
+  const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
+  show(lastView);
 })();
 
 // ==============================
-// Helpers / Storage / Utils
+// Helpers / Utils
 // ==============================
 function tdWrap(el, right = false) {
   const td = document.createElement("td");
@@ -506,19 +581,6 @@ function setStatus(msg) {
 function codeNum(code) {
   const n = Number(String(code || "").replace(/[^0-9]/g, ""));
   return Number.isFinite(n) ? n : 999999999;
-}
-
-function loadLines() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
 }
 
 function parseMoney(v) {
