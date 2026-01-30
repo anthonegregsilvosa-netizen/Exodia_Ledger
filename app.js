@@ -68,7 +68,8 @@ function toDbRow(line) {
     id: line.id,
     date: line.date,
     ref: line.ref,
-    accountId: line.accountId,
+    accountId: line.account_id: 
+      
     debit: line.debit,
     credit: line.credit,
   };
@@ -240,7 +241,7 @@ window.saveJournal = async function () {
       id: randId(),
       date,
       ref,
-      accountId,
+      account_id: accountId,
       debit: d,
       credit: c,
     });
