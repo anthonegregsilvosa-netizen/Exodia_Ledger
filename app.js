@@ -2,6 +2,30 @@
 
 const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const STORAGE_KEY = "exodiaLedger.journalLines.v1";
+
+// ==============================
+// Supabase Setup
+// ==============================
+const SUPABASE_URL = https://vtglfaeyvmciieuntzhs.supabase.co"; // example: https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo"; // anon public key ONLY
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function sbFetchJournalLines() {
+  const { data, error } = await sb
+    .from("journal_lines")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function sbInsertJournalLines(rows) {
+  const { error } = await sb.from("journal_lines").insert(rows);
+  if (error) throw error;
+}
+
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
 const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
@@ -142,8 +166,9 @@ window.saveJournal = function () {
 
     totalDebit += d;
     totalCredit += c;
-
+    
     newLines.push({
+      
       id: randId(),
       date,
       ref,
@@ -152,14 +177,16 @@ window.saveJournal = function () {
       credit: c,
     });
   });
-
+  
   if (newLines.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
     return setStatus("Not balanced: Total Debit must equal Total Credit.");
   }
 
-  lines = lines.concat(newLines);
-  persist();
+  await sbInsertJournalLines(newLines);   // save to Supabase
+lines = await loadLines();              // reload from DB
+renderLedger();
+renderTrialBalance?.();
 
   // Reset JE table
   $("je-lines").innerHTML = "";
