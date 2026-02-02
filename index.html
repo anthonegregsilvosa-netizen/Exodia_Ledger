@@ -26,151 +26,157 @@
   </div>
 </div>
 
-<!-- =========================
-     HEADER / NAV
-========================= -->
-<header style="padding:12px; border-bottom:1px solid #ccc;">
-  <button onclick="show('coa')">Chart of Accounts</button>
-  <button onclick="show('journal')">Journal Entry</button>
-  <button onclick="show('ledger')">General Ledger</button>
-  <button onclick="show('trial')">Trial Balance</button>
-</header>
+<!-- ✅ APP WRAPPER (HIDDEN UNTIL LOGIN) -->
+<div id="app" style="display:none;">
 
-<!-- =========================
-     FILTERS
-========================= -->
-<div style="margin:10px 0;">
-  Year:
-  <select id="filter-year" onchange="applyDateFilter()"></select>
+  <!-- =========================
+       HEADER / NAV
+  ========================= -->
+  <header style="padding:12px; border-bottom:1px solid #ccc;">
+    <button onclick="show('coa')">Chart of Accounts</button>
+    <button onclick="show('journal')">Journal Entry</button>
+    <button onclick="show('ledger')">General Ledger</button>
+    <button onclick="show('trial')">Trial Balance</button>
+  </header>
 
-  Month:
-  <select id="filter-month" onchange="applyDateFilter()">
-    <option value="">All</option>
-    <option value="1">Jan</option>
-    <option value="2">Feb</option>
-    <option value="3">Mar</option>
-    <option value="4">Apr</option>
-    <option value="5">May</option>
-    <option value="6">Jun</option>
-    <option value="7">Jul</option>
-    <option value="8">Aug</option>
-    <option value="9">Sep</option>
-    <option value="10">Oct</option>
-    <option value="11">Nov</option>
-    <option value="12">Dec</option>
-  </select>
-</div>
+  <!-- =========================
+       FILTERS
+  ========================= -->
+  <div style="margin:10px 0;">
+    Year:
+    <select id="filter-year" onchange="applyDateFilter()"></select>
 
-<!-- =========================
-     CHART OF ACCOUNTS
-========================= -->
-<section id="coa">
-  <h2>Chart of Accounts</h2>
-
-  <div style="margin-bottom:10px;">
-    <button onclick="filterCOA('All')">All</button>
-    <button onclick="filterCOA('Asset')">Assets</button>
-    <button onclick="filterCOA('Liability')">Liabilities</button>
-    <button onclick="filterCOA('Equity')">Equity</button>
-    <button onclick="filterCOA('Revenue')">Revenue</button>
-    <button onclick="filterCOA('Expense')">Expenses</button>
+    Month:
+    <select id="filter-month" onchange="applyDateFilter()">
+      <option value="">All</option>
+      <option value="1">Jan</option>
+      <option value="2">Feb</option>
+      <option value="3">Mar</option>
+      <option value="4">Apr</option>
+      <option value="5">May</option>
+      <option value="6">Jun</option>
+      <option value="7">Jul</option>
+      <option value="8">Aug</option>
+      <option value="9">Sep</option>
+      <option value="10">Oct</option>
+      <option value="11">Nov</option>
+      <option value="12">Dec</option>
+    </select>
   </div>
 
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Account Name</th>
-        <th>Type</th>
-        <th>Normal</th>
-        <th>Balance</th>
-      </tr>
-    </thead>
-    <tbody id="coa-body"></tbody>
-  </table>
-</section>
+  <!-- =========================
+       CHART OF ACCOUNTS
+  ========================= -->
+  <section id="coa">
+    <h2>Chart of Accounts</h2>
 
-<!-- =========================
-     JOURNAL ENTRY
-========================= -->
-<section id="journal" style="display:none;">
-  <h2>Journal Entry</h2>
+    <div style="margin-bottom:10px;">
+      <button onclick="filterCOA('All')">All</button>
+      <button onclick="filterCOA('Asset')">Assets</button>
+      <button onclick="filterCOA('Liability')">Liabilities</button>
+      <button onclick="filterCOA('Equity')">Equity</button>
+      <button onclick="filterCOA('Revenue')">Revenue</button>
+      <button onclick="filterCOA('Expense')">Expenses</button>
+    </div>
 
-  <label>Date:
-    <input type="date" id="je-date">
-  </label><br><br>
+    <table border="1" cellpadding="6">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Account Name</th>
+          <th>Type</th>
+          <th>Normal</th>
+          <th>Balance</th>
+        </tr>
+      </thead>
+      <tbody id="coa-body"></tbody>
+    </table>
+  </section>
 
-  <label>Ref No:
-    <input type="text" id="je-ref">
-  </label><br><br>
+  <!-- =========================
+       JOURNAL ENTRY
+  ========================= -->
+  <section id="journal" style="display:none;">
+    <h2>Journal Entry</h2>
 
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Account</th>
-        <th>Debit</th>
-        <th>Credit</th>
-      </tr>
-    </thead>
-    <tbody id="je-lines"></tbody>
-  </table>
+    <label>Date:
+      <input type="date" id="je-date">
+    </label><br><br>
 
-  <button onclick="addLine()">Add Line</button>
-  <button onclick="saveJournal()">Save Journal Entry</button>
+    <label>Ref No:
+      <input type="text" id="je-ref">
+    </label><br><br>
 
-  <p id="je-status"></p>
-</section>
+    <table border="1" cellpadding="6">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="je-lines"></tbody>
+    </table>
 
-<!-- =========================
-     GENERAL LEDGER
-========================= -->
-<section id="ledger" style="display:none;">
-  <h2>General Ledger</h2>
+    <button onclick="addLine()">Add Line</button>
+    <button onclick="saveJournal()">Save Journal Entry</button>
 
-  <select id="ledger-account" onchange="renderLedger()"></select>
+    <p id="je-status"></p>
+  </section>
 
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Ref</th>
-        <th>Debit</th>
-        <th>Credit</th>
-        <th>Running Balance</th>
-      </tr>
-    </thead>
-    <tbody id="ledger-body"></tbody>
-  </table>
-</section>
+  <!-- =========================
+       GENERAL LEDGER
+  ========================= -->
+  <section id="ledger" style="display:none;">
+    <h2>General Ledger</h2>
 
-<!-- =========================
-     TRIAL BALANCE
-========================= -->
-<section id="trial" style="display:none;">
-  <h2>Trial Balance</h2>
+    <select id="ledger-account" onchange="renderLedger()"></select>
 
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Account Name</th>
-        <th>Type</th>
-        <th style="text-align:right;">Debit</th>
-        <th style="text-align:right;">Credit</th>
-      </tr>
-    </thead>
-    <tbody id="tb-body"></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="3"><b>Total</b></td>
-        <td id="tb-total-debit" style="text-align:right;"><b>0.00</b></td>
-        <td id="tb-total-credit" style="text-align:right;"><b>0.00</b></td>
-      </tr>
-    </tfoot>
-  </table>
+    <table border="1" cellpadding="6">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Ref</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Running Balance</th>
+        </tr>
+      </thead>
+      <tbody id="ledger-body"></tbody>
+    </table>
+  </section>
 
-  <p id="tb-status"></p>
-</section>
+  <!-- =========================
+       TRIAL BALANCE
+  ========================= -->
+  <section id="trial" style="display:none;">
+    <h2>Trial Balance</h2>
+
+    <table border="1" cellpadding="6">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Account Name</th>
+          <th>Type</th>
+          <th style="text-align:right;">Debit</th>
+          <th style="text-align:right;">Credit</th>
+        </tr>
+      </thead>
+      <tbody id="tb-body"></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><b>Total</b></td>
+          <td id="tb-total-debit" style="text-align:right;"><b>0.00</b></td>
+          <td id="tb-total-credit" style="text-align:right;"><b>0.00</b></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <p id="tb-status"></p>
+  </section>
+
+</div><!-- /#app -->
 
 <!-- =========================
      SCRIPTS
