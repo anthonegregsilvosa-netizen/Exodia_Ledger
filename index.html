@@ -6,40 +6,40 @@
   <title>Mini QuickBooks</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
-  <body>
 
-    </head>
 <body>
 
-  <!-- ✅ PUT AUTH BOX HERE (inside body) -->
-  <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px 0;">
-    <div id="auth-logged-out">
-      <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
-      <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
-      <button onclick="signUp()">Sign Up</button>
-      <button onclick="signIn()">Login</button>
-      <span id="auth-msg" style="margin-left:10px;"></span>
-    </div>
-
-    <div id="auth-logged-in" style="display:none;">
-      Logged in as: <b id="auth-user"></b>
-      <button onclick="signOut()" style="margin-left:10px;">Logout</button>
-    </div>
+<!-- =========================
+     AUTH BOX (LOGIN ONLY)
+========================= -->
+<div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px;">
+  <div id="auth-logged-out">
+    <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
+    <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
+    <button onclick="signIn()">Login</button>
+    <span id="auth-msg" style="margin-left:10px;"></span>
   </div>
 
-  <!-- your header/tabs/etc here -->
-  ...
-</body>
-</html>
+  <div id="auth-logged-in" style="display:none;">
+    Logged in as: <b id="auth-user"></b>
+    <button onclick="signOut()" style="margin-left:10px;">Logout</button>
+  </div>
+</div>
 
+<!-- =========================
+     HEADER / NAV
+========================= -->
 <header style="padding:12px; border-bottom:1px solid #ccc;">
   <button onclick="show('coa')">Chart of Accounts</button>
   <button onclick="show('journal')">Journal Entry</button>
   <button onclick="show('ledger')">General Ledger</button>
   <button onclick="show('trial')">Trial Balance</button>
 </header>
-  
-  <div style="margin:10px 0;">
+
+<!-- =========================
+     FILTERS
+========================= -->
+<div style="margin:10px 0;">
   Year:
   <select id="filter-year" onchange="applyDateFilter()"></select>
 
@@ -61,11 +61,12 @@
   </select>
 </div>
 
-
+<!-- =========================
+     CHART OF ACCOUNTS
+========================= -->
 <section id="coa">
   <h2>Chart of Accounts</h2>
 
-  <!-- COA TYPE FILTER BUTTONS -->
   <div style="margin-bottom:10px;">
     <button onclick="filterCOA('All')">All</button>
     <button onclick="filterCOA('Asset')">Assets</button>
@@ -89,6 +90,9 @@
   </table>
 </section>
 
+<!-- =========================
+     JOURNAL ENTRY
+========================= -->
 <section id="journal" style="display:none;">
   <h2>Journal Entry</h2>
 
@@ -117,6 +121,9 @@
   <p id="je-status"></p>
 </section>
 
+<!-- =========================
+     GENERAL LEDGER
+========================= -->
 <section id="ledger" style="display:none;">
   <h2>General Ledger</h2>
 
@@ -136,7 +143,9 @@
   </table>
 </section>
 
-  <!-- TRIAL BALANCE -->
+<!-- =========================
+     TRIAL BALANCE
+========================= -->
 <section id="trial" style="display:none;">
   <h2>Trial Balance</h2>
 
@@ -163,8 +172,11 @@
   <p id="tb-status"></p>
 </section>
 
+<!-- =========================
+     SCRIPTS
+========================= -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>
+
 </body>
 </html>
-
