@@ -1,7 +1,12 @@
 // === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) =====
 
+// ==============================
+// Local UI memory keys
+// ==============================
 const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
-const STORAGE_KEY = "exodiaLedger.journalLines.v1";
+const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
+const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
+const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 
 // ==============================
 // Supabase Setup
@@ -13,18 +18,83 @@ const SUPABASE_ANON_KEY =
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==============================
-// Keys / State
+// AUTH (Login only)
 // ==============================
-const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
-const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
-const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
-
 const $ = (id) => document.getElementById(id);
 
+function setAuthMsg(msg) {
+  const el = $("auth-msg");
+  if (el) el.textContent = msg || "";
+}
+
+function setAuthUI(session) {
+  const outBox = $("auth-logged-out");
+  const inBox = $("auth-logged-in");
+  const userEl = $("auth-user");
+
+  if (!outBox || !inBox) return;
+
+  if (session?.user) {
+    outBox.style.display = "none";
+    inBox.style.display = "block";
+    if (userEl) userEl.textContent = session.user.email || session.user.id;
+  } else {
+    outBox.style.display = "block";
+    inBox.style.display = "none";
+    if (userEl) userEl.textContent = "";
+  }
+}
+
+async function getUser() {
+  const { data } = await sb.auth.getUser();
+  return data?.user || null;
+}
+
+window.signIn = async function () {
+  const email = ($("auth-email")?.value || "").trim();
+  const password = $("auth-pass")?.value || "";
+
+  if (!email || !password) return setAuthMsg("Enter email + password.");
+
+  setAuthMsg("Logging in...");
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) return setAuthMsg(error.message);
+  setAuthMsg("");
+};
+
+window.signOut = async function () {
+  await sb.auth.signOut();
+  setAuthMsg("Logged out.");
+};
+
+// listen auth changes
+sb.auth.onAuthStateChange(async (_event, session) => {
+  setAuthUI(session);
+
+  // refresh data when login/logout happens
+  if (session?.user) {
+    lines = await loadLines();
+    rebuildYearDropdownFromLines();
+    renderCOA();
+    renderLedger();
+    renderTrialBalance?.();
+  } else {
+    lines = [];
+    renderCOA();
+    renderLedger();
+    renderTrialBalance?.();
+  }
+});
+
+// ==============================
+// App state
+// ==============================
 let COA = [];
 let currentCOAType = "All";
-let lines = []; // loaded async
+let lines = []; // loaded from Supabase
 
+// Date filter state
 let filterYear = "";
 let filterMonth = "";
 
@@ -32,59 +102,84 @@ let filterMonth = "";
 // Supabase helpers
 // ==============================
 function normalizeLine(row) {
-  // DB columns: account_id ; App expects: accountId
   return {
-    ...row,
-    accountId: row.account_id,
-  };
-}
-
-function toDbRow(appRow) {
-  // IMPORTANT: do NOT send `id` (uuid). Let Supabase default generate it.
-  return {
-    date: appRow.date,
-    ref: appRow.ref,
-    account_id: appRow.accountId,
-    debit: num(appRow.debit),
-    credit: num(appRow.credit),
+    id: row.id,
+    user_id: row.user_id,
+    date: row.date,
+    ref: row.ref,
+    accountId: row.accountId ?? row.account_id ?? "",
+    debit: Number(row.debit || 0),
+    credit: Number(row.credit || 0),
+    created_at: row.created_at,
   };
 }
 
 async function sbFetchJournalLines() {
-  const { data, error } = await sb
-    .from("journal_lines")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const user = await getUser();
+  if (!user) return [];
 
+  // Prefer filtering by user_id (even if RLS already enforces it)
+  let q = sb.from("journal_lines").select("*").order("created_at", { ascending: true });
+
+  // If your table has user_id (you said you created it), filter it
+  q = q.eq("user_id", user.id);
+
+  const { data, error } = await q;
   if (error) throw error;
+
   return (data || []).map(normalizeLine);
 }
 
-async function sbInsertJournalLines(rows) {
-  const payload = rows.map(toDbRow);
-  const { error } = await sb.from("journal_lines").insert(payload);
-  if (error) throw error;
+function toDbRow(line, userId) {
+  return {
+    id: line.id,
+    user_id: userId,
+    date: line.date,
+    ref: line.ref,
+    accountId: line.accountId, // camelCase attempt
+    debit: line.debit,
+    credit: line.credit,
+  };
 }
 
-async function loadLines() {
-  // Prefer DB; fallback to localStorage if DB fails
-  try {
-    const dbLines = await sbFetchJournalLines();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dbLines));
-    return dbLines;
-  } catch (e) {
-    console.warn("Supabase load failed, using local cache:", e);
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
+function toDbRowSnake(line, userId) {
+  return {
+    id: line.id,
+    user_id: userId,
+    date: line.date,
+    ref: line.ref,
+    account_id: line.accountId, // snake_case fallback
+    debit: line.debit,
+    credit: line.credit,
+  };
+}
+
+async function sbInsertJournalLines(linesToInsert) {
+  const user = await getUser();
+  if (!user) throw new Error("Not logged in.");
+
+  // Attempt 1: insert with accountId
+  const rows1 = linesToInsert.map((l) => toDbRow(l, user.id));
+  let { error } = await sb.from("journal_lines").insert(rows1);
+  if (!error) return;
+
+  // Attempt 2: insert with account_id
+  const rows2 = linesToInsert.map((l) => toDbRowSnake(l, user.id));
+  const res2 = await sb.from("journal_lines").insert(rows2);
+
+  if (res2.error) {
+    console.error("Supabase insert error:", res2.error);
+    throw res2.error;
   }
 }
 
-function persistLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+async function loadLines() {
+  try {
+    return await sbFetchJournalLines();
+  } catch (e) {
+    console.error("loadLines failed:", e);
+    return [];
+  }
 }
 
 // ==============================
@@ -102,7 +197,7 @@ window.applyDateFilter = function () {
 
   renderCOA();
   renderLedger();
-  renderTrialBalance();
+  renderTrialBalance?.();
 };
 
 // ==============================
@@ -119,9 +214,12 @@ window.show = function (view) {
 
   if (view === "coa") renderCOA();
   if (view === "ledger") renderLedger();
-  if (view === "trial") renderTrialBalance();
+  if (view === "trial") renderTrialBalance?.();
 };
 
+// ==============================
+// COA buttons filter
+// ==============================
 window.filterCOA = function (type) {
   currentCOAType = type;
   renderCOA();
@@ -179,69 +277,68 @@ window.addLine = function () {
 };
 
 window.saveJournal = async function () {
-  try {
-    const date = $("je-date")?.value;
-    const ref = ($("je-ref")?.value || "").trim();
+  const user = await getUser();
+  if (!user) return setStatus("Please login first.");
 
-    if (!date) return setStatus("Please set a Date.");
-    if (!ref) return setStatus("Please enter Ref No.");
+  const date = $("je-date")?.value;
+  const ref = ($("je-ref")?.value || "").trim();
 
-    const tbody = $("je-lines");
-    if (!tbody) return;
+  if (!date) return setStatus("Please set a Date.");
+  if (!ref) return setStatus("Please enter Ref No.");
 
-    const rows = [...tbody.querySelectorAll("tr")];
-    const newLines = [];
+  const rows = [...$("je-lines").querySelectorAll("tr")];
+  const newLines = [];
 
-    let totalDebit = 0;
-    let totalCredit = 0;
+  let totalDebit = 0;
+  let totalCredit = 0;
 
-    rows.forEach((r) => {
-      const sel = r.querySelector("select");
-      const inputs = r.querySelectorAll("input");
+  rows.forEach((r) => {
+    const sel = r.querySelector("select");
+    const inputs = r.querySelectorAll("input");
 
-      const accountId = sel?.value || "";
-      const d = parseMoney(inputs[0]?.value);
-      const c = parseMoney(inputs[1]?.value);
+    const accountId = sel?.value || "";
+    const d = parseMoney(inputs[0]?.value);
+    const c = parseMoney(inputs[1]?.value);
 
-      if (!accountId) return;
-      if (!d && !c) return;
+    if (!accountId) return;
+    if (!d && !c) return;
 
-      totalDebit += d;
-      totalCredit += c;
+    totalDebit += d;
+    totalCredit += c;
 
-      newLines.push({
-        date,
-        ref,
-        accountId,
-        debit: d,
-        credit: c,
-      });
+    newLines.push({
+      id: randId(), // can be uuid too, but this works if DB accepts text/uuid? If uuid column, keep your DB as uuid default or use uuid on DB side.
+      date,
+      ref,
+      accountId,
+      debit: d,
+      credit: c,
     });
+  });
 
-    if (newLines.length < 2) return setStatus("Add at least 2 lines.");
-    if (Math.abs(totalDebit - totalCredit) > 0.00001) {
-      return setStatus("Not balanced: Total Debit must equal Total Credit.");
-    }
+  if (newLines.length < 2) return setStatus("Add at least 2 lines.");
+  if (Math.abs(totalDebit - totalCredit) > 0.00001) {
+    return setStatus("Not balanced: Total Debit must equal Total Credit.");
+  }
 
-    // Save to Supabase
-    await sbInsertJournalLines(newLines);
+  try {
+    await sbInsertJournalLines(newLines); // save to Supabase
+    lines = await loadLines();            // reload from DB
+    rebuildYearDropdownFromLines();
 
-    // Reload from DB
-    lines = await loadLines();
-
-    // Reset JE table
-    $("je-lines").innerHTML = "";
-    addLine();
-    addLine();
-
-    setStatus("Saved ✅ General Ledger updated automatically.");
+    setStatus("Saved ✅");
     renderCOA();
     renderLedger();
-    renderTrialBalance();
+    renderTrialBalance?.();
   } catch (e) {
-    console.error("Save failed:", e);
+    console.error(e);
     setStatus("Save failed ❌ (check console)");
   }
+
+  // Reset JE table
+  $("je-lines").innerHTML = "";
+  addLine();
+  addLine();
 };
 
 // ==============================
@@ -318,8 +415,8 @@ function renderLedger() {
 
   tbody.innerHTML = "";
   const accountId = sel.value;
-  localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
 
+  localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
   if (!accountId) return;
 
   const acct = COA.find((a) => a.id === accountId);
@@ -367,7 +464,7 @@ function renderLedger() {
 }
 
 // ==============================
-// Compute balances
+// Compute balances (uses filters)
 // ==============================
 function computeBalances() {
   const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
@@ -468,6 +565,37 @@ function renderTrialBalance() {
 // ==============================
 // Boot
 // ==============================
+function rebuildYearDropdownFromLines() {
+  const yearSel = $("filter-year");
+  if (!yearSel) return;
+
+  const yearsFromLines = lines
+    .map((l) => String(l.date || "").slice(0, 4))
+    .filter((y) => y && /^\d{4}$/.test(y));
+
+  const years = Array.from(new Set(yearsFromLines)).sort();
+
+  yearSel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "All";
+  optAll.textContent = "All";
+  yearSel.appendChild(optAll);
+
+  years.forEach((y) => {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+
+  const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
+  const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "All";
+  if ($("filter-year")) $("filter-year").value = savedYear;
+  if ($("filter-month")) $("filter-month").value = savedMonth;
+
+  applyDateFilter();
+}
+
 (async function boot() {
   // Default date
   const d = new Date();
@@ -481,40 +609,9 @@ function renderTrialBalance() {
     COA = [];
   }
 
-  // Load journal lines from DB/cache
-  lines = await loadLines();
-  persistLocal();
-
-  // Build Year dropdown
-  const yearSel = $("filter-year");
-  if (yearSel) {
-    const yearsFromLines = lines
-      .map((l) => String(l.date || "").slice(0, 4))
-      .filter((y) => y && /^\d{4}$/.test(y));
-
-    const years = Array.from(new Set(yearsFromLines)).sort();
-
-    yearSel.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "All";
-    optAll.textContent = "All";
-    yearSel.appendChild(optAll);
-
-    years.forEach((y) => {
-      const opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    });
-
-    const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
-    const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
-
-    if ($("filter-year")) $("filter-year").value = savedYear;
-    if ($("filter-month")) $("filter-month").value = savedMonth;
-
-    applyDateFilter();
-  }
+  // Auth UI initial state
+  const { data } = await sb.auth.getSession();
+  setAuthUI(data?.session || null);
 
   // Prepare JE lines
   if ($("je-lines")) {
@@ -523,13 +620,20 @@ function renderTrialBalance() {
     addLine();
   }
 
+  // Load lines ONLY if logged in
+  const user = await getUser();
+  if (user) {
+    lines = await loadLines();
+  } else {
+    lines = [];
+    setStatus("Please login to view/save entries.");
+  }
+
+  rebuildYearDropdownFromLines();
+
+  // Restore last opened tab
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
   show(lastView);
-
-  // initial renders
-  renderCOA();
-  renderLedger();
-  renderTrialBalance();
 })();
 
 // ==============================
@@ -567,6 +671,10 @@ function money(n) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function randId() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
 
 function esc(s) {
