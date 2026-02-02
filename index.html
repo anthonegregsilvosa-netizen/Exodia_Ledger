@@ -6,7 +6,31 @@
   <title>Mini QuickBooks</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+  <body>
+
+    </head>
 <body>
+
+  <!-- ✅ PUT AUTH BOX HERE (inside body) -->
+  <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+    <div id="auth-logged-out">
+      <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
+      <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
+      <button onclick="signUp()">Sign Up</button>
+      <button onclick="signIn()">Login</button>
+      <span id="auth-msg" style="margin-left:10px;"></span>
+    </div>
+
+    <div id="auth-logged-in" style="display:none;">
+      Logged in as: <b id="auth-user"></b>
+      <button onclick="signOut()" style="margin-left:10px;">Logout</button>
+    </div>
+  </div>
+
+  <!-- your header/tabs/etc here -->
+  ...
+</body>
+</html>
 
 <header style="padding:12px; border-bottom:1px solid #ccc;">
   <button onclick="show('coa')">Chart of Accounts</button>
