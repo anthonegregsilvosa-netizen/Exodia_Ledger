@@ -1,197 +1,229 @@
-// === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) + LOGIN =====
+// === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) + AUTH (Login only) ===
 
-const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
-
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+// ==============================
+// Local UI memory keys
+// ==============================
+const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
 const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
-const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 
+// ==============================
+// Supabase Setup
+// ==============================
+const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ==============================
+// DOM helper
+// ==============================
 const $ = (id) => document.getElementById(id);
+
+// ==============================
+// App state
+// ==============================
+let currentUser = null;
 
 let COA = [];
 let currentCOAType = "All";
-let lines = []; // from Supabase
+let lines = []; // loaded from Supabase
+
+// Date filter state
 let filterYear = "";
 let filterMonth = "";
-let currentUser = null; // session user
 
 // ==============================
-// UI lock/unlock (login-first)
+// AUTH UI helpers
 // ==============================
 function setUI(isLoggedIn, email = "") {
-  const authOut = $("auth-logged-out");
-  const authIn = $("auth-logged-in");
   const app = $("app");
+  const outBox = $("auth-logged-out");
+  const inBox = $("auth-logged-in");
   const userEl = $("auth-user");
 
   if (isLoggedIn) {
-    if (authOut) authOut.style.display = "none";
-    if (authIn) authIn.style.display = "block";
     if (app) app.style.display = "block";
+    if (outBox) outBox.style.display = "none";
+    if (inBox) inBox.style.display = "block";
     if (userEl) userEl.textContent = email || "";
   } else {
-    if (authOut) authOut.style.display = "block";
-    if (authIn) authIn.style.display = "none";
     if (app) app.style.display = "none";
+    if (outBox) outBox.style.display = "block";
+    if (inBox) inBox.style.display = "none";
     if (userEl) userEl.textContent = "";
   }
 }
 
-// ==============================
-// Supabase DB helpers
-// Table: public.journal_lines
-// columns expected: id uuid, date date, ref text, account_id text, debit numeric, credit numeric, user_id uuid, created_at timestamptz
-// ==============================
-async function sbFetchJournalLines() {
-  if (!currentUser) return [];
-
-  const { data, error } = await sb
-    .from("journal_lines")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+function setAuthMsg(text, isError = false) {
+  const msg = $("auth-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.style.color = isError ? "crimson" : "";
 }
 
-async function sbInsertJournalLines(rows) {
-  const { error } = await sb.from("journal_lines").insert(rows);
-  if (error) throw error;
+function setAuthMsgIn(text) {
+  const msg = $("auth-msg-in");
+  if (!msg) return;
+  msg.textContent = text || "";
+}
+
+function clearAuthInputs() {
+  const e = $("auth-email");
+  const p = $("auth-pass");
+  if (e) e.value = "";
+  if (p) p.value = "";
+}
+
+function refreshLoginButtonState() {
+  const btn = $("auth-login-btn");
+  const email = ($("auth-email")?.value || "").trim();
+  const pass = $("auth-pass")?.value || "";
+  if (btn) btn.disabled = !(email && pass);
+}
+
+function initPasswordToggle() {
+  const btn = $("auth-toggle-pass");
+  const pass = $("auth-pass");
+  if (!btn || !pass) return;
+
+  btn.addEventListener("click", () => {
+    pass.type = pass.type === "password" ? "text" : "password";
+    btn.textContent = pass.type === "password" ? "👁" : "🙈";
+  });
 }
 
 // ==============================
-// AUTH (login only)
+// AUTH actions (Login only)
 // ==============================
 window.signIn = async function signIn() {
   const email = ($("auth-email")?.value || "").trim();
   const password = $("auth-pass")?.value || "";
-  const msg = $("auth-msg");
 
-  if (msg) msg.textContent = "Logging in...";
+  setAuthMsg("Logging in...");
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
   if (error) {
-  msg.textContent = error.message;
+    // Clear inputs on failed login (your preference)
+    clearAuthInputs();
+    refreshLoginButtonState();
 
-  // Clear inputs on failed login
-  document.getElementById("auth-email").value = "";
-  document.getElementById("auth-pass").value = "";
-
-  setUI(false);
-  return;
-}
+    setAuthMsg(error.message || "Login failed.", true);
+    setUI(false);
+    return;
+  }
 
   currentUser = data.user;
-  if (msg) msg.textContent = "Logged in ✅";
-
+  setAuthMsg("");
+  setAuthMsgIn("Logged in ✅");
   setUI(true, currentUser?.email || email);
+
   await initAppAfterLogin();
 };
 
 window.signOut = async function signOut() {
   await sb.auth.signOut();
 
-  // Clear input fields
-  document.getElementById("auth-email").value = "";
-  document.getElementById("auth-pass").value = "";
+  // Clear input fields so logout doesn't leave email/password filled
+  clearAuthInputs();
+  refreshLoginButtonState();
 
-  // Reset user state
   currentUser = null;
-
-  // Reset UI (this already hides app + shows login if your setUI does gating)
+  setAuthMsg("Logged out.");
+  setAuthMsgIn("");
   setUI(false);
-
-  // Message
-  const msg = document.getElementById("auth-msg");
-  if (msg) msg.textContent = "Logged out.";
 };
 
 // ==============================
-// Show / Hide Password
+// Supabase helpers
 // ==============================
-window.togglePassword = function togglePassword() {
-  const passInput = document.getElementById("auth-pass");
-  const toggleBtn = document.getElementById("toggle-pass");
+function normalizeLine(row) {
+  // Supports BOTH schemas:
+  // - accountId (camelCase)
+  // - account_id (snake_case)
+  return {
+    id: row.id,
+    date: row.date,
+    ref: row.ref,
+    accountId: row.accountId ?? row.account_id ?? "",
+    debit: Number(row.debit || 0),
+    credit: Number(row.credit || 0),
+    created_at: row.created_at,
+  };
+}
 
-  if (!passInput || !toggleBtn) return;
+async function sbFetchJournalLines() {
+  const { data, error } = await sb
+    .from("journal_lines")
+    .select("*")
+    .order("created_at", { ascending: true });
 
-  if (passInput.type === "password") {
-    passInput.type = "text";
-    toggleBtn.textContent = "Hide";
-  } else {
-    passInput.type = "password";
-    toggleBtn.textContent = "Show";
+  if (error) throw error;
+  return (data || []).map(normalizeLine);
+}
+
+function toDbRowCamel(line) {
+  return {
+    id: line.id,
+    date: line.date,
+    ref: line.ref,
+    accountId: line.accountId,
+    debit: line.debit,
+    credit: line.credit,
+  };
+}
+
+function toDbRowSnake(line) {
+  return {
+    id: line.id,
+    date: line.date,
+    ref: line.ref,
+    account_id: line.accountId,
+    debit: line.debit,
+    credit: line.credit,
+  };
+}
+
+async function sbInsertJournalLines(linesToInsert) {
+  // Attempt 1: insert with accountId
+  const rows1 = linesToInsert.map(toDbRowCamel);
+  let { error } = await sb.from("journal_lines").insert(rows1);
+  if (!error) return;
+
+  // Attempt 2: insert with account_id (if schema is snake_case)
+  const rows2 = linesToInsert.map(toDbRowSnake);
+  const res2 = await sb.from("journal_lines").insert(rows2);
+
+  if (res2.error) {
+    console.error("Supabase insert error:", res2.error);
+    throw res2.error;
   }
-};
+}
 
-// restore session on refresh
-(async function restoreSession() {
-  const { data } = await sb.auth.getSession();
-  const session = data.session;
-
-  if (session?.user) {
-    currentUser = session.user;
-    setUI(true, currentUser.email);
-    await initAppAfterLogin();
-  } else {
-    setUI(false);
-  }
-})();
-
-// ==============================
-// Init after login (load COA + lines + UI)
-// ==============================
-async function initAppAfterLogin() {
-  // Default date
-  const d = new Date();
-  if ($("je-date")) $("je-date").valueAsDate = d;
-
-  // Load COA JSON
+async function loadLinesFromDb() {
   try {
-    COA = await fetch("./data/coa.json").then((r) => r.json());
+    return await sbFetchJournalLines();
   } catch (e) {
-    console.log("COA load failed:", e);
-    COA = [];
+    console.error("loadLinesFromDb failed:", e);
+    return [];
   }
-
-  // Load lines from Supabase
-  try {
-    lines = await sbFetchJournalLines();
-  } catch (e) {
-    console.error("Load lines failed:", e);
-    setStatus("Load failed ❌ Check console / RLS policies.");
-    lines = [];
-  }
-
-  buildYearDropdownFromLines();
-  restoreSavedFiltersAndApply();
-  prepareJournalLinesUI();
-  
-  // Restore last opened tab
-  const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
-  show(lastView);
-
-  // Render initial
-  renderCOA();
-  renderLedger();
-  renderTrialBalance();
 }
 
 // ==============================
 // Filters (Year/Month)
 // ==============================
-window.applyDateFilter = function applyDateFilter() {
+window.applyDateFilter = function () {
   const y = $("filter-year")?.value ?? "";
   const m = $("filter-month")?.value ?? "";
 
+  // Treat "" OR "All" as no filter
   filterYear = (!y || y === "All") ? "" : y;
   filterMonth = (!m || m === "All") ? "" : m;
 
+  // Save raw UI values so refresh keeps them (per browser)
   localStorage.setItem(FILTER_YEAR_KEY, y);
   localStorage.setItem(FILTER_MONTH_KEY, m);
 
@@ -200,44 +232,10 @@ window.applyDateFilter = function applyDateFilter() {
   renderTrialBalance();
 };
 
-function buildYearDropdownFromLines() {
-  const yearSel = $("filter-year");
-  if (!yearSel) return;
-
-  const yearsFromLines = lines
-    .map((l) => String(l.date || "").slice(0, 4))
-    .filter((y) => y && /^\d{4}$/.test(y));
-
-  const years = Array.from(new Set(yearsFromLines)).sort();
-
-  yearSel.innerHTML = "";
-  const optAll = document.createElement("option");
-  optAll.value = "All";
-  optAll.textContent = "All";
-  yearSel.appendChild(optAll);
-
-  years.forEach((y) => {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
-  });
-}
-
-function restoreSavedFiltersAndApply() {
-  const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
-  const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
-
-  if ($("filter-year")) $("filter-year").value = savedYear;
-  if ($("filter-month")) $("filter-month").value = savedMonth;
-
-  window.applyDateFilter();
-}
-
 // ==============================
 // Tabs
 // ==============================
-window.show = function show(view) {
+window.show = function (view) {
   localStorage.setItem(LAST_VIEW_KEY, view);
 
   ["coa", "journal", "ledger", "trial"].forEach((v) => {
@@ -254,23 +252,15 @@ window.show = function show(view) {
 // ==============================
 // COA buttons filter
 // ==============================
-window.filterCOA = function filterCOA(type) {
+window.filterCOA = function (type) {
   currentCOAType = type;
   renderCOA();
 };
 
 // ==============================
-// Journal Entry UI
+// Journal Entry
 // ==============================
-function prepareJournalLinesUI() {
-  if ($("je-lines")) {
-    $("je-lines").innerHTML = "";
-    addLine();
-    addLine();
-  }
-}
-
-window.addLine = function addLine() {
+window.addLine = function () {
   const tbody = $("je-lines");
   if (!tbody) return;
 
@@ -284,6 +274,7 @@ window.addLine = function addLine() {
   opt0.textContent = "Select account...";
   select.appendChild(opt0);
 
+  // Journal dropdown should show ALL accounts, sorted by code
   const sortedForDropdown = [...COA].sort((a, b) => {
     const ca = codeNum(a.code);
     const cb = codeNum(b.code);
@@ -293,7 +284,6 @@ window.addLine = function addLine() {
 
   sortedForDropdown.forEach((a) => {
     const opt = document.createElement("option");
-    // your COA json must have "id" field matching what you want to store in journal_lines.account_id
     opt.value = a.id;
     opt.textContent = `${a.code} - ${a.name}`;
     select.appendChild(opt);
@@ -319,9 +309,7 @@ window.addLine = function addLine() {
   tbody.appendChild(tr);
 };
 
-window.saveJournal = async function saveJournal() {
-  if (!currentUser) return setStatus("Please login first.");
-
+window.saveJournal = async function () {
   const date = $("je-date")?.value;
   const ref = ($("je-ref")?.value || "").trim();
 
@@ -338,25 +326,23 @@ window.saveJournal = async function saveJournal() {
     const sel = r.querySelector("select");
     const inputs = r.querySelectorAll("input");
 
-    const account_id = sel?.value || "";
+    const accountId = sel?.value || "";
     const d = parseMoney(inputs[0]?.value);
     const c = parseMoney(inputs[1]?.value);
 
-    if (!account_id) return;
+    if (!accountId) return;
     if (!d && !c) return;
 
     totalDebit += d;
     totalCredit += c;
 
     newLines.push({
-      // use uuid if your table requires id; better is to set default gen_random_uuid() in DB
-      id: (crypto?.randomUUID?.() || randId()),
+      id: randId(),
       date,
       ref,
-      account_id,
+      accountId,
       debit: d,
       credit: c,
-      user_id: currentUser.id, // important for RLS user ownership
     });
   });
 
@@ -367,11 +353,7 @@ window.saveJournal = async function saveJournal() {
 
   try {
     await sbInsertJournalLines(newLines);
-
-    // reload from DB
-    lines = await sbFetchJournalLines();
-    buildYearDropdownFromLines();
-    restoreSavedFiltersAndApply();
+    lines = await loadLinesFromDb();
 
     // Reset JE table
     $("je-lines").innerHTML = "";
@@ -383,8 +365,8 @@ window.saveJournal = async function saveJournal() {
     renderLedger();
     renderTrialBalance();
   } catch (e) {
-    console.error("Supabase insert error:", e);
-    setStatus("Save failed ❌ Check console + Supabase RLS/table columns.");
+    console.error(e);
+    setStatus("Save failed ❌ Check console + Supabase policy/table columns.");
   }
 };
 
@@ -436,7 +418,7 @@ function renderLedger() {
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // Build dropdown once (reset if COA changed)
+  // Build dropdown ONCE only (so selection works)
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -457,6 +439,7 @@ function renderLedger() {
       sel.appendChild(opt);
     });
 
+    // Restore saved ledger account selection on refresh
     const savedAcct = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
     if (savedAcct) sel.value = savedAcct;
   }
@@ -464,14 +447,17 @@ function renderLedger() {
   tbody.innerHTML = "";
   const accountId = sel.value;
 
+  // Save selected account (so refresh keeps it) - per browser
   localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
+
   if (!accountId) return;
 
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
 
+  // Apply Year/Month filter to ledger lines
   const acctLines = lines
-    .filter((l) => l.account_id === accountId)
+    .filter((l) => l.accountId === accountId)
     .filter((l) => {
       if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
       if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
@@ -479,8 +465,8 @@ function renderLedger() {
     })
     .sort(
       (a, b) =>
-        String(a.date || "").localeCompare(String(b.date || "")) ||
-        String(a.ref || "").localeCompare(String(b.ref || ""))
+        (a.date || "").localeCompare(b.date || "") ||
+        (a.ref || "").localeCompare(b.ref || "")
     );
 
   let running = 0;
@@ -510,7 +496,6 @@ function renderLedger() {
     tbody.appendChild(tr);
   }
 }
-window.renderLedger = renderLedger; // for onchange
 
 // ==============================
 // Compute balances (uses filters)
@@ -526,13 +511,13 @@ function computeBalances() {
       return true;
     })
     .forEach((l) => {
-      const normal = normals[l.account_id] || "Debit";
+      const normal = normals[l.accountId] || "Debit";
       const delta =
         normal === "Credit"
           ? num(l.credit) - num(l.debit)
           : num(l.debit) - num(l.credit);
 
-      balances[l.account_id] = (balances[l.account_id] || 0) + delta;
+      balances[l.accountId] = (balances[l.accountId] || 0) + delta;
     });
 
   return balances;
@@ -610,10 +595,100 @@ function renderTrialBalance() {
         : `Not balanced ❌ (Difference: ${money(diff)})`;
   }
 }
-window.renderTrialBalance = renderTrialBalance;
 
 // ==============================
-// Helpers
+// Init after login
+// ==============================
+async function initAppAfterLogin() {
+  // Default date
+  const d = new Date();
+  if ($("je-date")) $("je-date").valueAsDate = d;
+
+  // Load COA JSON
+  try {
+    COA = await fetch("./data/coa.json").then((r) => r.json());
+  } catch (e) {
+    console.log("COA load failed:", e);
+    COA = [];
+  }
+
+  // Load lines from Supabase
+  lines = await loadLinesFromDb();
+
+  // Reset dropdowns so they rebuild cleanly
+  const ledgerSel = $("ledger-account");
+  if (ledgerSel) ledgerSel.innerHTML = "";
+
+  // Build Year dropdown (All + years from data)
+  const yearSel = $("filter-year");
+  if (yearSel) {
+    const yearsFromLines = lines
+      .map((l) => String(l.date || "").slice(0, 4))
+      .filter((y) => y && /^\d{4}$/.test(y));
+
+    const years = Array.from(new Set(yearsFromLines)).sort();
+
+    yearSel.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "All";
+    optAll.textContent = "All";
+    yearSel.appendChild(optAll);
+
+    years.forEach((y) => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    });
+
+    // Restore saved Year/Month UI values
+    const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
+    const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
+    if ($("filter-year")) $("filter-year").value = savedYear;
+    if ($("filter-month")) $("filter-month").value = savedMonth;
+  }
+
+  // Prepare JE lines
+  if ($("je-lines")) {
+    $("je-lines").innerHTML = "";
+    addLine();
+    addLine();
+  }
+
+  // Apply filters + render
+  applyDateFilter();
+
+  // Restore last opened tab
+  const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
+  show(lastView);
+}
+
+// ==============================
+// Restore session on refresh
+// ==============================
+(async function restoreSession() {
+  // auth UI extras
+  initPasswordToggle();
+
+  // enable/disable login button
+  $("auth-email")?.addEventListener("input", refreshLoginButtonState);
+  $("auth-pass")?.addEventListener("input", refreshLoginButtonState);
+  refreshLoginButtonState();
+
+  const { data } = await sb.auth.getSession();
+  const session = data.session;
+
+  if (session?.user) {
+    currentUser = session.user;
+    setUI(true, currentUser.email);
+    await initAppAfterLogin();
+  } else {
+    setUI(false);
+  }
+})();
+
+// ==============================
+// Helpers / Utils
 // ==============================
 function tdWrap(el, right = false) {
   const td = document.createElement("td");
