@@ -76,10 +76,15 @@ window.signIn = async function signIn() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
   if (error) {
-    if (msg) msg.textContent = "Wrong email/password ❌";
-    setUI(false);
-    return;
-  }
+  msg.textContent = error.message;
+
+  // Clear inputs on failed login
+  document.getElementById("auth-email").value = "";
+  document.getElementById("auth-pass").value = "";
+
+  setUI(false);
+  return;
+}
 
   currentUser = data.user;
   if (msg) msg.textContent = "Logged in ✅";
@@ -90,9 +95,19 @@ window.signIn = async function signIn() {
 
 window.signOut = async function signOut() {
   await sb.auth.signOut();
+
+  // Clear input fields
+  document.getElementById("auth-email").value = "";
+  document.getElementById("auth-pass").value = "";
+
+  // Reset user state
   currentUser = null;
+
+  // Reset UI (this already hides app + shows login if your setUI does gating)
   setUI(false);
-  const msg = $("auth-msg");
+
+  // Message
+  const msg = document.getElementById("auth-msg");
   if (msg) msg.textContent = "Logged out.";
 };
 
@@ -138,7 +153,7 @@ async function initAppAfterLogin() {
   buildYearDropdownFromLines();
   restoreSavedFiltersAndApply();
   prepareJournalLinesUI();
-
+  
   // Restore last opened tab
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
   show(lastView);
