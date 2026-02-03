@@ -15,24 +15,28 @@
 <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px;">
   <div id="auth-logged-out">
     <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
+    <span style="display:inline-block; width:8px;"></span>
+
     <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
-    <button type="button" onclick="togglePassword()" id="toggle-pass">Show</button>
-    <button onclick="signIn()">Login</button>
+    <button id="auth-toggle-pass" type="button" style="margin-left:6px;">👁</button>
+
+    <button id="auth-login-btn" onclick="signIn()" disabled style="margin-left:10px;">Login</button>
     <span id="auth-msg" style="margin-left:10px;"></span>
   </div>
 
   <div id="auth-logged-in" style="display:none;">
     Logged in as: <b id="auth-user"></b>
     <button onclick="signOut()" style="margin-left:10px;">Logout</button>
+    <span id="auth-msg-in" style="margin-left:10px;"></span>
   </div>
 </div>
 
-<!-- ✅ APP WRAPPER (HIDDEN UNTIL LOGIN) -->
+<!-- =========================
+     APP (HIDDEN UNTIL LOGIN)
+========================= -->
 <div id="app" style="display:none;">
 
-  <!-- =========================
-       HEADER / NAV
-  ========================= -->
+  <!-- HEADER / NAV -->
   <header style="padding:12px; border-bottom:1px solid #ccc;">
     <button onclick="show('coa')">Chart of Accounts</button>
     <button onclick="show('journal')">Journal Entry</button>
@@ -40,9 +44,7 @@
     <button onclick="show('trial')">Trial Balance</button>
   </header>
 
-  <!-- =========================
-       FILTERS
-  ========================= -->
+  <!-- FILTERS -->
   <div style="margin:10px 0;">
     Year:
     <select id="filter-year" onchange="applyDateFilter()"></select>
@@ -65,9 +67,7 @@
     </select>
   </div>
 
-  <!-- =========================
-       CHART OF ACCOUNTS
-  ========================= -->
+  <!-- CHART OF ACCOUNTS -->
   <section id="coa">
     <h2>Chart of Accounts</h2>
 
@@ -94,9 +94,7 @@
     </table>
   </section>
 
-  <!-- =========================
-       JOURNAL ENTRY
-  ========================= -->
+  <!-- JOURNAL ENTRY -->
   <section id="journal" style="display:none;">
     <h2>Journal Entry</h2>
 
@@ -114,7 +112,6 @@
           <th>Account</th>
           <th>Debit</th>
           <th>Credit</th>
-          <th></th>
         </tr>
       </thead>
       <tbody id="je-lines"></tbody>
@@ -126,9 +123,7 @@
     <p id="je-status"></p>
   </section>
 
-  <!-- =========================
-       GENERAL LEDGER
-  ========================= -->
+  <!-- GENERAL LEDGER -->
   <section id="ledger" style="display:none;">
     <h2>General Ledger</h2>
 
@@ -148,9 +143,7 @@
     </table>
   </section>
 
-  <!-- =========================
-       TRIAL BALANCE
-  ========================= -->
+  <!-- TRIAL BALANCE -->
   <section id="trial" style="display:none;">
     <h2>Trial Balance</h2>
 
@@ -179,9 +172,7 @@
 
 </div><!-- /#app -->
 
-<!-- =========================
-     SCRIPTS
-========================= -->
+<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>
 
