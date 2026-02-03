@@ -17,8 +17,25 @@
     <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
     <span style="display:inline-block; width:8px;"></span>
 
-    <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
-    <button id="auth-toggle-pass" type="button" style="margin-left:6px;">👁</button>
+    <div style="position:relative; display:inline-block;">
+  <input
+    id="auth-pass"
+    type="password"
+    placeholder="Password"
+    style="width:220px; padding-right:30px;"
+  >
+  <span
+    id="auth-toggle-pass"
+    style="
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      cursor:pointer;
+      user-select:none;
+    "
+  >👁</span>
+</div>
 
     <button id="auth-login-btn" onclick="signIn()" disabled style="margin-left:10px;">Login</button>
     <span id="auth-msg" style="margin-left:10px;"></span>
