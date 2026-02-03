@@ -111,6 +111,24 @@ window.signOut = async function signOut() {
   if (msg) msg.textContent = "Logged out.";
 };
 
+// ==============================
+// Show / Hide Password
+// ==============================
+window.togglePassword = function togglePassword() {
+  const passInput = document.getElementById("auth-pass");
+  const toggleBtn = document.getElementById("toggle-pass");
+
+  if (!passInput || !toggleBtn) return;
+
+  if (passInput.type === "password") {
+    passInput.type = "text";
+    toggleBtn.textContent = "Hide";
+  } else {
+    passInput.type = "password";
+    toggleBtn.textContent = "Show";
+  }
+};
+
 // restore session on refresh
 (async function restoreSession() {
   const { data } = await sb.auth.getSession();
