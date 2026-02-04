@@ -310,12 +310,20 @@ window.addLine = function () {
 };
 
 window.saveJournal = async function () {
-  const date = $("je-date")?.value;
+  // 1) read header fields
+  const entry_date = $("je-date")?.value;
   const ref = ($("je-ref")?.value || "").trim();
 
-  if (!date) return setStatus("Please set a Date.");
+  const description = ($("je-desc")?.value || "").trim();
+  const department = ($("je-dept")?.value || "").trim();
+  const payment_method = ($("je-paymethod")?.value || "").trim();
+  const client_vendor = ($("je-client")?.value || "").trim();
+  const remarks = ($("je-remarks")?.value || "").trim();
+
+  if (!entry_date) return setStatus("Please set a Date.");
   if (!ref) return setStatus("Please enter Ref No.");
 
+  // 2) collect lines + validate balance FIRST
   const rows = [...$("je-lines").querySelectorAll("tr")];
   const newLines = [];
 
@@ -338,11 +346,13 @@ window.saveJournal = async function () {
 
     newLines.push({
       id: randId(),
-      date,
+      user_id: currentUser.id,
+      entry_date,
       ref,
-      accountId,
+      account_id: accountId,
       debit: d,
       credit: c,
+      // journal_id will be added after header insert
     });
   });
 
@@ -351,14 +361,48 @@ window.saveJournal = async function () {
     return setStatus("Not balanced: Total Debit must equal Total Credit.");
   }
 
+  // 3) insert header (journal_entries)
+  const { data: entry, error: entryErr } = await sb
+    .from("journal_entries")
+    .insert([{
+      user_id: currentUser.id,
+      entry_date,
+      ref,
+      description,
+      department,
+      payment_method,
+      client_vendor,
+      remarks
+    }])
+    .select("id")
+    .single();
+
+  if (entryErr) {
+    setStatus("Save failed ❌ Ref No already exists or policy error.");
+    console.error(entryErr);
+    return;
+  }
+
+  const journal_id = entry.id;
+
+  // 4) insert lines linked to header
+  const linesToInsert = newLines.map(l => ({ ...l, journal_id }));
+
   try {
-    await sbInsertJournalLines(newLines);
+    await sbInsertJournalLines(linesToInsert);
     lines = await loadLinesFromDb();
 
-    // Reset JE table
     $("je-lines").innerHTML = "";
     addLine();
     addLine();
+
+    // optional: clear header fields too
+    // $("je-ref").value = "";
+    // $("je-desc").value = "";
+    // $("je-dept").value = "";
+    // $("je-paymethod").value = "";
+    // $("je-client").value = "";
+    // $("je-remarks").value = "";
 
     setStatus("Saved ✅ General Ledger updated automatically.");
     renderCOA();
