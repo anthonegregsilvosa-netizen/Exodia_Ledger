@@ -188,20 +188,24 @@ function toDbRowSnake(line) {
 }
 
 async function sbInsertJournalLines(linesToInsert) {
-  // Attempt 1: insert with accountId
-  const rows1 = linesToInsert.map(toDbRowCamel);
-  let { error } = await sb.from("journal_lines").insert(rows1);
-  if (!error) return;
+  // IMPORTANT: use snake_case columns that match your DB
+  const rows = linesToInsert.map((l) => ({
+    user_id: l.user_id,
+    date: l.date,               // <-- not entry_date
+    ref: l.ref,
+    account_id: l.account_id,
+    debit: l.debit,
+    credit: l.credit,
+    journal_id: l.journal_id ?? null, // only if column exists
+  }));
 
-  // Attempt 2: insert with account_id (if schema is snake_case)
-  const rows2 = linesToInsert.map(toDbRowSnake);
-  const res2 = await sb.from("journal_lines").insert(rows2);
-
-  if (res2.error) {
-    console.error("Supabase insert error:", res2.error);
-    throw res2.error;
+  const { error } = await sb.from("journal_lines").insert(rows);
+  if (error) {
+    console.error("Supabase insert error:", error);
+    throw error;
   }
 }
+
 
 async function loadLinesFromDb() {
   try {
@@ -344,17 +348,17 @@ window.saveJournal = async function () {
     totalDebit += d;
     totalCredit += c;
 
-    newLines.push({
-      id: randId(),
-      user_id: currentUser.id,
-      entry_date,
-      ref,
-      account_id: accountId,
-      debit: d,
-      credit: c,
-      // journal_id will be added after header insert
-    });
-  });
+    function normalizeLine(row) {
+  return {
+    id: row.id,
+    date: row.date,
+    ref: row.ref,
+    accountId: row.account_id || "", // convert db -> app
+    debit: Number(row.debit || 0),
+    credit: Number(row.credit || 0),
+    created_at: row.created_at,
+  };
+}
 
   if (newLines.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
