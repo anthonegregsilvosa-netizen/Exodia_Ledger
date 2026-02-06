@@ -378,10 +378,14 @@ window.saveJournal = async function () {
     .single();
 
   if (entryErr) {
-    setStatus("Save failed ❌ Ref No already exists or policy error.");
-    console.error(entryErr);
-    return;
+  if (entryErr.code === "23505") {
+    setStatus("Save failed ❌ Ref No already exists for that date. Use a new Ref No.");
+  } else {
+    setStatus("Save failed ❌ Policy/table error.");
   }
+  console.error(entryErr);
+  return;
+}
 
   const journal_id = entry.id;
 
