@@ -13,47 +13,30 @@
      AUTH BOX (LOGIN ONLY)
 ========================= -->
 <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px;">
-  <div id="auth-logged-out">
-    <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
-    <span style="display:inline-block; width:8px;"></span>
+  <div id="auth-logged-out" style="display:block;">
+    <input id="auth-email" type="email" placeholder="Email" style="width:240px;">
+    <span style="display:inline-block; position:relative;">
+      <input id="auth-pass" type="password" placeholder="Password" style="width:240px; padding-right:38px;">
+      <button id="auth-toggle-pass" type="button"
+        style="position:absolute; right:6px; top:50%; transform:translateY(-50%); cursor:pointer;">
+        👁
+      </button>
+    </span>
 
-    <div style="position:relative; display:inline-block;">
-  <input
-    id="auth-pass"
-    type="password"
-    placeholder="Password"
-    style="width:220px; padding-right:30px;"
-  >
-  <span
-    id="auth-toggle-pass"
-    style="
-      position:absolute;
-      right:8px;
-      top:50%;
-      transform:translateY(-50%);
-      cursor:pointer;
-      user-select:none;
-    "
-  >👁</span>
-</div>
-
-    <button id="auth-login-btn" onclick="signIn()" disabled style="margin-left:10px;">Login</button>
+    <button id="auth-login-btn" type="button" onclick="signIn()" disabled>Login</button>
     <span id="auth-msg" style="margin-left:10px;"></span>
   </div>
 
   <div id="auth-logged-in" style="display:none;">
     Logged in as: <b id="auth-user"></b>
-    <button onclick="signOut()" style="margin-left:10px;">Logout</button>
+    <button type="button" onclick="signOut()" style="margin-left:10px;">Logout</button>
     <span id="auth-msg-in" style="margin-left:10px;"></span>
   </div>
 </div>
 
-<!-- =========================
-     APP (HIDDEN UNTIL LOGIN)
-========================= -->
+<!-- ✅ APP WRAPPER (HIDDEN UNTIL LOGIN) -->
 <div id="app" style="display:none;">
 
-  <!-- HEADER / NAV -->
   <header style="padding:12px; border-bottom:1px solid #ccc;">
     <button onclick="show('coa')">Chart of Accounts</button>
     <button onclick="show('journal')">Journal Entry</button>
@@ -61,7 +44,6 @@
     <button onclick="show('trial')">Trial Balance</button>
   </header>
 
-  <!-- FILTERS -->
   <div style="margin:10px 0;">
     Year:
     <select id="filter-year" onchange="applyDateFilter()"></select>
@@ -84,7 +66,6 @@
     </select>
   </div>
 
-  <!-- CHART OF ACCOUNTS -->
   <section id="coa">
     <h2>Chart of Accounts</h2>
 
@@ -111,7 +92,6 @@
     </table>
   </section>
 
-  <!-- JOURNAL ENTRY -->
   <section id="journal" style="display:none;">
     <h2>Journal Entry</h2>
 
@@ -123,25 +103,26 @@
       <input type="text" id="je-ref">
     </label><br><br>
 
+    <!-- Optional headers (safe even if you don't use them yet) -->
     <label>Description:
-  <input type="text" id="je-desc">
-</label><br><br>
+      <input type="text" id="je-desc" style="width:320px;">
+    </label><br><br>
 
-<label>Department / Cost Center:
-  <input type="text" id="je-dept">
-</label><br><br>
+    <label>Department / Cost Center:
+      <input type="text" id="je-dept" style="width:320px;">
+    </label><br><br>
 
-<label>Payment Method:
-  <input type="text" id="je-paymethod">
-</label><br><br>
+    <label>Payment Method:
+      <input type="text" id="je-paymethod" style="width:320px;">
+    </label><br><br>
 
-<label>Client / Vendor:
-  <input type="text" id="je-client">
-</label><br><br>
+    <label>Client / Vendor:
+      <input type="text" id="je-client" style="width:320px;">
+    </label><br><br>
 
-<label>Remarks:
-  <input type="text" id="je-remarks">
-</label><br><br>
+    <label>Remarks:
+      <input type="text" id="je-remarks" style="width:320px;">
+    </label><br><br>
 
     <table border="1" cellpadding="6">
       <thead>
@@ -149,6 +130,7 @@
           <th>Account</th>
           <th>Debit</th>
           <th>Credit</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="je-lines"></tbody>
@@ -160,7 +142,6 @@
     <p id="je-status"></p>
   </section>
 
-  <!-- GENERAL LEDGER -->
   <section id="ledger" style="display:none;">
     <h2>General Ledger</h2>
 
@@ -180,7 +161,6 @@
     </table>
   </section>
 
-  <!-- TRIAL BALANCE -->
   <section id="trial" style="display:none;">
     <h2>Trial Balance</h2>
 
@@ -207,11 +187,9 @@
     <p id="tb-status"></p>
   </section>
 
-</div><!-- /#app -->
+</div>
 
-<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>
-
 </body>
 </html>
