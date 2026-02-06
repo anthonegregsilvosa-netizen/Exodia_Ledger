@@ -1,4 +1,4 @@
-// === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) + AUTH (Login only) ===
+// === Mini QuickBooks (COA + Journal + Ledger + Trial Balance) + AUTH (Login only) ===
 
 // ==============================
 // Local UI memory keys
@@ -12,9 +12,7 @@ const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 // Supabase Setup
 // ==============================
 const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
-
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE"; // <-- keep your real anon key here
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==============================
@@ -26,12 +24,10 @@ const $ = (id) => document.getElementById(id);
 // App state
 // ==============================
 let currentUser = null;
-
 let COA = [];
 let currentCOAType = "All";
 let lines = []; // loaded from Supabase
 
-// Date filter state
 let filterYear = "";
 let filterMonth = "";
 
@@ -107,10 +103,8 @@ window.signIn = async function signIn() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // Clear inputs on failed login (your preference)
     clearAuthInputs();
     refreshLoginButtonState();
-
     setAuthMsg(error.message || "Login failed.", true);
     setUI(false);
     return;
@@ -127,7 +121,6 @@ window.signIn = async function signIn() {
 window.signOut = async function signOut() {
   await sb.auth.signOut();
 
-  // Clear input fields so logout doesn't leave email/password filled
   clearAuthInputs();
   refreshLoginButtonState();
 
@@ -141,9 +134,6 @@ window.signOut = async function signOut() {
 // Supabase helpers
 // ==============================
 function normalizeLine(row) {
-  // Supports BOTH schemas:
-  // - accountId (camelCase)
-  // - account_id (snake_case)
   return {
     id: row.id,
     date: row.date,
@@ -151,61 +141,28 @@ function normalizeLine(row) {
     accountId: row.accountId ?? row.account_id ?? "",
     debit: Number(row.debit || 0),
     credit: Number(row.credit || 0),
+    user_id: row.user_id,
     created_at: row.created_at,
+    journal_id: row.journal_id,
   };
 }
 
 async function sbFetchJournalLines() {
+  if (!currentUser) return [];
   const { data, error } = await sb
     .from("journal_lines")
     .select("*")
+    .eq("user_id", currentUser.id)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
   return (data || []).map(normalizeLine);
 }
 
-function toDbRowCamel(line) {
-  return {
-    id: line.id,
-    date: line.date,
-    ref: line.ref,
-    accountId: line.accountId,
-    debit: line.debit,
-    credit: line.credit,
-  };
-}
-
-function toDbRowSnake(line) {
-  return {
-    id: line.id,
-    date: line.date,
-    ref: line.ref,
-    account_id: line.accountId,
-    debit: line.debit,
-    credit: line.credit,
-  };
-}
-
-async function sbInsertJournalLines(linesToInsert) {
-  // IMPORTANT: use snake_case columns that match your DB
-  const rows = linesToInsert.map((l) => ({
-    user_id: l.user_id,
-    date: l.date,               // <-- not entry_date
-    ref: l.ref,
-    account_id: l.account_id,
-    debit: l.debit,
-    credit: l.credit,
-    journal_id: l.journal_id ?? null, // only if column exists
-  }));
-
+async function sbInsertJournalLines(rows) {
   const { error } = await sb.from("journal_lines").insert(rows);
-  if (error) {
-    console.error("Supabase insert error:", error);
-    throw error;
-  }
+  if (error) throw error;
 }
-
 
 async function loadLinesFromDb() {
   try {
@@ -223,11 +180,9 @@ window.applyDateFilter = function () {
   const y = $("filter-year")?.value ?? "";
   const m = $("filter-month")?.value ?? "";
 
-  // Treat "" OR "All" as no filter
   filterYear = (!y || y === "All") ? "" : y;
   filterMonth = (!m || m === "All") ? "" : m;
 
-  // Save raw UI values so refresh keeps them (per browser)
   localStorage.setItem(FILTER_YEAR_KEY, y);
   localStorage.setItem(FILTER_MONTH_KEY, m);
 
@@ -254,7 +209,7 @@ window.show = function (view) {
 };
 
 // ==============================
-// COA buttons filter
+// COA filter
 // ==============================
 window.filterCOA = function (type) {
   currentCOAType = type;
@@ -262,7 +217,7 @@ window.filterCOA = function (type) {
 };
 
 // ==============================
-// Journal Entry
+// Journal Entry UI
 // ==============================
 window.addLine = function () {
   const tbody = $("je-lines");
@@ -278,7 +233,6 @@ window.addLine = function () {
   opt0.textContent = "Select account...";
   select.appendChild(opt0);
 
-  // Journal dropdown should show ALL accounts, sorted by code
   const sortedForDropdown = [...COA].sort((a, b) => {
     const ca = codeNum(a.code);
     const cb = codeNum(b.code);
@@ -313,8 +267,12 @@ window.addLine = function () {
   tbody.appendChild(tr);
 };
 
+// ==============================
+// Save Journal (prevents duplicate Ref)
+// ==============================
 window.saveJournal = async function () {
-  // 1) read header fields
+  if (!currentUser) return setStatus("Please login first.");
+
   const entry_date = $("je-date")?.value;
   const ref = ($("je-ref")?.value || "").trim();
 
@@ -327,9 +285,8 @@ window.saveJournal = async function () {
   if (!entry_date) return setStatus("Please set a Date.");
   if (!ref) return setStatus("Please enter Ref No.");
 
-  // 2) collect lines + validate balance FIRST
   const rows = [...$("je-lines").querySelectorAll("tr")];
-  const newLines = [];
+  const lineRows = [];
 
   let totalDebit = 0;
   let totalCredit = 0;
@@ -348,24 +305,23 @@ window.saveJournal = async function () {
     totalDebit += d;
     totalCredit += c;
 
-    function normalizeLine(row) {
-  return {
-    id: row.id,
-    date: row.date,
-    ref: row.ref,
-    accountId: row.account_id || "", // convert db -> app
-    debit: Number(row.debit || 0),
-    credit: Number(row.credit || 0),
-    created_at: row.created_at,
-  };
-}
+    lineRows.push({
+      id: randId(),
+      user_id: currentUser.id,
+      date: entry_date,
+      ref,
+      account_id: accountId,
+      debit: d,
+      credit: c,
+    });
+  });
 
-  if (newLines.length < 2) return setStatus("Add at least 2 lines.");
+  if (lineRows.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
     return setStatus("Not balanced: Total Debit must equal Total Credit.");
   }
 
-  // 3) insert header (journal_entries)
+  // 1) insert journal header first (this is where duplicate ref is blocked)
   const { data: entry, error: entryErr } = await sb
     .from("journal_entries")
     .insert([{
@@ -382,19 +338,19 @@ window.saveJournal = async function () {
     .single();
 
   if (entryErr) {
-  if (entryErr.code === "23505") {
-    setStatus("Save failed ❌ Ref No already exists for that date. Use a new Ref No.");
-  } else {
-    setStatus("Save failed ❌ Policy/table error.");
+    // 23505 = unique violation (duplicate)
+    if (entryErr.code === "23505") {
+      setStatus("Save failed ❌ Ref No already exists. Use a different Ref No.");
+    } else {
+      setStatus("Save failed ❌ Check console / policies / columns.");
+    }
+    console.error(entryErr);
+    return;
   }
-  console.error(entryErr);
-  return;
-}
 
+  // 2) insert lines linked to header (optional journal_id)
   const journal_id = entry.id;
-
-  // 4) insert lines linked to header
-  const linesToInsert = newLines.map(l => ({ ...l, journal_id }));
+  const linesToInsert = lineRows.map(r => ({ ...r, journal_id }));
 
   try {
     await sbInsertJournalLines(linesToInsert);
@@ -403,14 +359,6 @@ window.saveJournal = async function () {
     $("je-lines").innerHTML = "";
     addLine();
     addLine();
-
-    // optional: clear header fields too
-    // $("je-ref").value = "";
-    // $("je-desc").value = "";
-    // $("je-dept").value = "";
-    // $("je-paymethod").value = "";
-    // $("je-client").value = "";
-    // $("je-remarks").value = "";
 
     setStatus("Saved ✅ General Ledger updated automatically.");
     renderCOA();
@@ -463,14 +411,13 @@ function renderCOA() {
 }
 
 // ==============================
-// Render Ledger (Account dropdown remembers selection)
+// Render Ledger
 // ==============================
 function renderLedger() {
   const sel = $("ledger-account");
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // Build dropdown ONCE only (so selection works)
   if (sel.options.length === 0) {
     const o0 = document.createElement("option");
     o0.value = "";
@@ -491,15 +438,12 @@ function renderLedger() {
       sel.appendChild(opt);
     });
 
-    // Restore saved ledger account selection on refresh
     const savedAcct = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
     if (savedAcct) sel.value = savedAcct;
   }
 
   tbody.innerHTML = "";
   const accountId = sel.value;
-
-  // Save selected account (so refresh keeps it) - per browser
   localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
 
   if (!accountId) return;
@@ -507,7 +451,6 @@ function renderLedger() {
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
 
-  // Apply Year/Month filter to ledger lines
   const acctLines = lines
     .filter((l) => l.accountId === accountId)
     .filter((l) => {
@@ -550,7 +493,7 @@ function renderLedger() {
 }
 
 // ==============================
-// Compute balances (uses filters)
+// Compute balances
 // ==============================
 function computeBalances() {
   const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
@@ -652,11 +595,9 @@ function renderTrialBalance() {
 // Init after login
 // ==============================
 async function initAppAfterLogin() {
-  // Default date
   const d = new Date();
   if ($("je-date")) $("je-date").valueAsDate = d;
 
-  // Load COA JSON
   try {
     COA = await fetch("./data/coa.json").then((r) => r.json());
   } catch (e) {
@@ -664,14 +605,11 @@ async function initAppAfterLogin() {
     COA = [];
   }
 
-  // Load lines from Supabase
   lines = await loadLinesFromDb();
 
-  // Reset dropdowns so they rebuild cleanly
   const ledgerSel = $("ledger-account");
   if (ledgerSel) ledgerSel.innerHTML = "";
 
-  // Build Year dropdown (All + years from data)
   const yearSel = $("filter-year");
   if (yearSel) {
     const yearsFromLines = lines
@@ -693,24 +631,20 @@ async function initAppAfterLogin() {
       yearSel.appendChild(opt);
     });
 
-    // Restore saved Year/Month UI values
     const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
     const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
     if ($("filter-year")) $("filter-year").value = savedYear;
     if ($("filter-month")) $("filter-month").value = savedMonth;
   }
 
-  // Prepare JE lines
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
     addLine();
     addLine();
   }
 
-  // Apply filters + render
   applyDateFilter();
 
-  // Restore last opened tab
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
   show(lastView);
 }
@@ -719,10 +653,8 @@ async function initAppAfterLogin() {
 // Restore session on refresh
 // ==============================
 (async function restoreSession() {
-  // auth UI extras
   initPasswordToggle();
 
-  // enable/disable login button
   $("auth-email")?.addEventListener("input", refreshLoginButtonState);
   $("auth-pass")?.addEventListener("input", refreshLoginButtonState);
   refreshLoginButtonState();
