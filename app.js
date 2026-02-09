@@ -136,14 +136,13 @@ window.signOut = async function signOut() {
 function normalizeLine(row) {
   return {
     id: row.id,
-    date: row.date,
-    ref: row.ref,
+    // support both schemas
+    date: row.date ?? row.entry_date ?? row.entryDate ?? "",
+    ref: row.ref ?? "",
     accountId: row.accountId ?? row.account_id ?? "",
     debit: Number(row.debit || 0),
     credit: Number(row.credit || 0),
-    user_id: row.user_id,
     created_at: row.created_at,
-    journal_id: row.journal_id,
   };
 }
 
