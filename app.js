@@ -1,4 +1,4 @@
-// === Mini QuickBooks (COA + Journal + Ledger + Trial Balance) + AUTH (Login only) ===
+// === Mini QuickBooks Logic (COA + Journal + Ledger + Trial Balance) + AUTH (Login only) ===
 
 // ==============================
 // Local UI memory keys
@@ -12,7 +12,7 @@ const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 // Supabase Setup
 // ==============================
 const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo"; // <-- keep your real anon key here
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==============================
@@ -26,7 +26,7 @@ const $ = (id) => document.getElementById(id);
 let currentUser = null;
 let COA = [];
 let currentCOAType = "All";
-let lines = []; // loaded from Supabase
+let lines = []; // loaded from Supabase (journal_lines)
 
 let filterYear = "";
 let filterMonth = "";
@@ -92,7 +92,7 @@ function initPasswordToggle() {
 }
 
 // ==============================
-// AUTH actions (Login only)
+// AUTH actions
 // ==============================
 window.signIn = async function signIn() {
   const email = ($("auth-email")?.value || "").trim();
@@ -136,10 +136,10 @@ window.signOut = async function signOut() {
 function normalizeLine(row) {
   return {
     id: row.id,
-    // support both schemas
-    date: row.date ?? row.entry_date ?? row.entryDate ?? "",
-    ref: row.ref ?? "",
-    accountId: row.accountId ?? row.account_id ?? "",
+    entry_date: row.entry_date,
+    ref: row.ref,
+    accountId: row.account_id,
+    accountName: row.account_name || "",
     debit: Number(row.debit || 0),
     credit: Number(row.credit || 0),
     created_at: row.created_at,
@@ -208,7 +208,7 @@ window.show = function (view) {
 };
 
 // ==============================
-// COA filter
+// COA buttons filter
 // ==============================
 window.filterCOA = function (type) {
   currentCOAType = type;
@@ -216,7 +216,7 @@ window.filterCOA = function (type) {
 };
 
 // ==============================
-// Journal Entry UI
+// Journal Entry
 // ==============================
 window.addLine = function () {
   const tbody = $("je-lines");
@@ -266,9 +266,6 @@ window.addLine = function () {
   tbody.appendChild(tr);
 };
 
-// ==============================
-// Save Journal (prevents duplicate Ref)
-// ==============================
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
@@ -284,6 +281,7 @@ window.saveJournal = async function () {
   if (!entry_date) return setStatus("Please set a Date.");
   if (!ref) return setStatus("Please enter Ref No.");
 
+  // Collect lines + validate
   const rows = [...$("je-lines").querySelectorAll("tr")];
   const lineRows = [];
 
@@ -301,15 +299,19 @@ window.saveJournal = async function () {
     if (!accountId) return;
     if (!d && !c) return;
 
+    const acct = COA.find(a => a.id === accountId);
+    const accountName = acct ? `${acct.code} - ${acct.name}` : "";
+
     totalDebit += d;
     totalCredit += c;
 
     lineRows.push({
-      id: randId(),
       user_id: currentUser.id,
-      date: entry_date,
+      journal_id: null, // fill after header insert
+      entry_date,
       ref,
       account_id: accountId,
+      account_name: accountName,
       debit: d,
       credit: c,
     });
@@ -320,7 +322,7 @@ window.saveJournal = async function () {
     return setStatus("Not balanced: Total Debit must equal Total Credit.");
   }
 
-  // 1) insert journal header first (this is where duplicate ref is blocked)
+  // Insert header
   const { data: entry, error: entryErr } = await sb
     .from("journal_entries")
     .insert([{
@@ -337,22 +339,19 @@ window.saveJournal = async function () {
     .single();
 
   if (entryErr) {
-    // 23505 = unique violation (duplicate)
     if (entryErr.code === "23505") {
-      setStatus("Save failed ❌ Ref No already exists. Use a different Ref No.");
-    } else {
-      setStatus("Save failed ❌ Check console / policies / columns.");
+      return setStatus("Save failed ❌ Ref No already exists for that date. Use a new Ref No.");
     }
     console.error(entryErr);
-    return;
+    return setStatus("Save failed ❌ Policy/table error.");
   }
 
-  // 2) insert lines linked to header (optional journal_id)
+  // Insert lines linked to header
   const journal_id = entry.id;
-  const linesToInsert = lineRows.map(r => ({ ...r, journal_id }));
+  const finalLines = lineRows.map(r => ({ ...r, journal_id }));
 
   try {
-    await sbInsertJournalLines(linesToInsert);
+    await sbInsertJournalLines(finalLines);
     lines = await loadLinesFromDb();
 
     $("je-lines").innerHTML = "";
@@ -365,7 +364,7 @@ window.saveJournal = async function () {
     renderTrialBalance();
   } catch (e) {
     console.error(e);
-    setStatus("Save failed ❌ Check console + Supabase policy/table columns.");
+    setStatus("Save failed ❌ Check console + Supabase policies.");
   }
 };
 
@@ -444,7 +443,6 @@ function renderLedger() {
   tbody.innerHTML = "";
   const accountId = sel.value;
   localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
-
   if (!accountId) return;
 
   const acct = COA.find((a) => a.id === accountId);
@@ -453,14 +451,15 @@ function renderLedger() {
   const acctLines = lines
     .filter((l) => l.accountId === accountId)
     .filter((l) => {
-      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
-      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
+      const d = String(l.entry_date || "");
+      if (filterYear && !d.startsWith(filterYear)) return false;
+      if (filterMonth && Number(d.slice(5, 7)) !== Number(filterMonth)) return false;
       return true;
     })
     .sort(
       (a, b) =>
-        (a.date || "").localeCompare(b.date || "") ||
-        (a.ref || "").localeCompare(b.ref || "")
+        String(a.entry_date || "").localeCompare(String(b.entry_date || "")) ||
+        String(a.ref || "").localeCompare(String(b.ref || ""))
     );
 
   let running = 0;
@@ -475,7 +474,7 @@ function renderLedger() {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${esc(l.date)}</td>
+      <td>${esc(l.entry_date)}</td>
       <td>${esc(l.ref)}</td>
       <td style="text-align:right;">${money(l.debit)}</td>
       <td style="text-align:right;">${money(l.credit)}</td>
@@ -500,8 +499,9 @@ function computeBalances() {
 
   lines
     .filter((l) => {
-      if (filterYear && !String(l.date || "").startsWith(filterYear)) return false;
-      if (filterMonth && Number(String(l.date || "").slice(5, 7)) !== Number(filterMonth)) return false;
+      const d = String(l.entry_date || "");
+      if (filterYear && !d.startsWith(filterYear)) return false;
+      if (filterMonth && Number(d.slice(5, 7)) !== Number(filterMonth)) return false;
       return true;
     })
     .forEach((l) => {
@@ -612,7 +612,7 @@ async function initAppAfterLogin() {
   const yearSel = $("filter-year");
   if (yearSel) {
     const yearsFromLines = lines
-      .map((l) => String(l.date || "").slice(0, 4))
+      .map((l) => String(l.entry_date || "").slice(0, 4))
       .filter((y) => y && /^\d{4}$/.test(y));
 
     const years = Array.from(new Set(yearsFromLines)).sort();
@@ -705,10 +705,6 @@ function money(n) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function randId() {
-  return Math.random().toString(16).slice(2) + Date.now().toString(16);
 }
 
 function esc(s) {
