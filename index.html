@@ -13,28 +13,24 @@
      AUTH BOX (LOGIN ONLY)
 ========================= -->
 <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px;">
-  <div id="auth-logged-out" style="display:block;">
-    <input id="auth-email" type="email" placeholder="Email" style="width:240px;">
-    <span style="display:inline-block; position:relative;">
-      <input id="auth-pass" type="password" placeholder="Password" style="width:240px; padding-right:38px;">
-      <button id="auth-toggle-pass" type="button"
-        style="position:absolute; right:6px; top:50%; transform:translateY(-50%); cursor:pointer;">
-        👁
-      </button>
-    </span>
-
-    <button id="auth-login-btn" type="button" onclick="signIn()" disabled>Login</button>
+  <div id="auth-logged-out">
+    <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
+    <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
+    <button id="auth-toggle-pass" type="button" title="Show/Hide Password">👁</button>
+    <button id="auth-login-btn" onclick="signIn()" disabled>Login</button>
     <span id="auth-msg" style="margin-left:10px;"></span>
   </div>
 
   <div id="auth-logged-in" style="display:none;">
     Logged in as: <b id="auth-user"></b>
-    <button type="button" onclick="signOut()" style="margin-left:10px;">Logout</button>
+    <button onclick="signOut()" style="margin-left:10px;">Logout</button>
     <span id="auth-msg-in" style="margin-left:10px;"></span>
   </div>
 </div>
 
-<!-- ✅ APP WRAPPER (HIDDEN UNTIL LOGIN) -->
+<!-- =========================
+     APP (HIDDEN UNTIL LOGIN)
+========================= -->
 <div id="app" style="display:none;">
 
   <header style="padding:12px; border-bottom:1px solid #ccc;">
@@ -66,6 +62,9 @@
     </select>
   </div>
 
+  <!-- =========================
+       COA
+  ========================= -->
   <section id="coa">
     <h2>Chart of Accounts</h2>
 
@@ -92,37 +91,36 @@
     </table>
   </section>
 
+  <!-- =========================
+       JOURNAL
+  ========================= -->
   <section id="journal" style="display:none;">
     <h2>Journal Entry</h2>
 
-    <label>Date:
+    <div style="display:grid; grid-template-columns: 220px 1fr; gap:8px; max-width:900px;">
+      <label>Date:</label>
       <input type="date" id="je-date">
-    </label><br><br>
 
-    <label>Ref No:
-      <input type="text" id="je-ref">
-    </label><br><br>
+      <label>Ref No:</label>
+      <input type="text" id="je-ref" placeholder="e.g. 0001">
 
-    <!-- Optional headers (safe even if you don't use them yet) -->
-    <label>Description:
-      <input type="text" id="je-desc" style="width:320px;">
-    </label><br><br>
+      <label>Description:</label>
+      <input type="text" id="je-desc">
 
-    <label>Department / Cost Center:
-      <input type="text" id="je-dept" style="width:320px;">
-    </label><br><br>
+      <label>Department / Cost Center:</label>
+      <input type="text" id="je-dept">
 
-    <label>Payment Method:
-      <input type="text" id="je-paymethod" style="width:320px;">
-    </label><br><br>
+      <label>Payment Method:</label>
+      <input type="text" id="je-paymethod">
 
-    <label>Client / Vendor:
-      <input type="text" id="je-client" style="width:320px;">
-    </label><br><br>
+      <label>Client / Vendor:</label>
+      <input type="text" id="je-client">
 
-    <label>Remarks:
-      <input type="text" id="je-remarks" style="width:320px;">
-    </label><br><br>
+      <label>Remarks:</label>
+      <input type="text" id="je-remarks">
+    </div>
+
+    <br>
 
     <table border="1" cellpadding="6">
       <thead>
@@ -142,6 +140,9 @@
     <p id="je-status"></p>
   </section>
 
+  <!-- =========================
+       LEDGER
+  ========================= -->
   <section id="ledger" style="display:none;">
     <h2>General Ledger</h2>
 
@@ -161,6 +162,9 @@
     </table>
   </section>
 
+  <!-- =========================
+       TRIAL BALANCE
+  ========================= -->
   <section id="trial" style="display:none;">
     <h2>Trial Balance</h2>
 
@@ -191,5 +195,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>
+
 </body>
 </html>
