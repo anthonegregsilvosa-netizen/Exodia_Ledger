@@ -269,8 +269,39 @@ window.addLine = function () {
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
-  const entry_date = $("je-date")?.value;
-  const ref = ($("je-ref")?.value || "").trim();
+  // ✅ REQUIRED FIELD CHECK (asterisk fields)
+const dateEl = $("je-date");
+const refEl = $("je-ref");
+const descEl = $("je-desc"); // optional if you have description
+
+const entry_date = dateEl?.value || "";
+const ref = (refEl?.value || "").trim();
+const description = descEl ? (descEl.value || "").trim() : "";
+
+// mark required fields
+markRequired(dateEl, !entry_date);
+markRequired(refEl, !ref);
+if (descEl) markRequired(descEl, !description);
+
+// stop saving if required fields missing
+if (!entry_date || !ref || (descEl && !description)) {
+  setStatus("Please fill all required (*) fields before saving.");
+  return;
+}
+
+// If you have description field and want it required:
+const descEl = $("je-desc");
+const desc = descEl ? (descEl.value || "").trim() : "";
+
+if (!date || !ref || (descEl && !desc)) {
+  setStatus("Please fill all required (*) fields before saving.");
+  return;
+}
+
+  function markRequired(el, isBad) {
+  if (!el) return;
+  el.style.border = isBad ? "2px solid crimson" : "";
+}
 
   const description = ($("je-desc")?.value || "").trim();
   const department = ($("je-dept")?.value || "").trim();
