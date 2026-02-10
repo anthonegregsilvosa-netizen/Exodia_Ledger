@@ -290,10 +290,13 @@ window.saveJournal = async function () {
   if (descEl) markRequired(descEl, !description);
 
   // stop saving if required fields missing
-  if (!entry_date || !ref || (descEl && !description)) {
-    setStatus("Please fill all required (*) fields before saving.");
-    return;
-  }
+  if (!entry_date || !ref || !description) {
+  setStatus("Please fill all required (*) fields before saving.");
+  markRequired($("je-date"), !entry_date);
+  markRequired($("je-ref"), !ref);
+  markRequired($("je-desc"), !description);
+  return;
+}
 
   // OPTIONAL header fields (only if present in HTML)
   const department = ($("je-dept")?.value || "").trim();
