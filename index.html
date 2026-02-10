@@ -8,17 +8,29 @@
 </head>
 
   <style>
-  /* Make all text inputs, date inputs, and selects bigger */
-  input[type="text"],
-  input[type="number"],
-  input[type="date"],
-  input[type="password"],
-  select,
-  textarea {
+  /* ✅ Keep filters normal size (Year/Month etc.) */
+  #filters select {
+    width: auto;
+    padding: 4px 6px;
+    font-size: 14px;
+  }
+
+  /* ✅ Make only Journal Entry inputs bigger (NOT the whole site) */
+  #journal input[type="text"],
+  #journal input[type="number"],
+  #journal input[type="date"],
+  #journal input[type="password"],
+  #journal select,
+  #journal textarea {
     width: 100%;
     padding: 10px;
     font-size: 16px;
     box-sizing: border-box;
+  }
+
+  /* Optional: make journal form area look cleaner */
+  #journal {
+    max-width: 1000px;
   }
 </style>
 
@@ -83,7 +95,7 @@
   <section id="coa">
     <h2>Chart of Accounts</h2>
 
-    <div style="margin-bottom:10px;">
+    <div id="filters" style="margin:10px 0;">
       <button onclick="filterCOA('All')">All</button>
       <button onclick="filterCOA('Asset')">Assets</button>
       <button onclick="filterCOA('Liability')">Liabilities</button>
