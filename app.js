@@ -269,48 +269,37 @@ window.addLine = function () {
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
-  // ✅ REQUIRED FIELD CHECK (asterisk fields)
-const dateEl = $("je-date");
-const refEl = $("je-ref");
-const descEl = $("je-desc"); // optional if you have description
-
-const entry_date = dateEl?.value || "";
-const ref = (refEl?.value || "").trim();
-const description = descEl ? (descEl.value || "").trim() : "";
-
-// mark required fields
-markRequired(dateEl, !entry_date);
-markRequired(refEl, !ref);
-if (descEl) markRequired(descEl, !description);
-
-// stop saving if required fields missing
-if (!entry_date || !ref || (descEl && !description)) {
-  setStatus("Please fill all required (*) fields before saving.");
-  return;
-}
-
-// If you have description field and want it required:
-const descEl = $("je-desc");
-const desc = descEl ? (descEl.value || "").trim() : "";
-
-if (!date || !ref || (descEl && !desc)) {
-  setStatus("Please fill all required (*) fields before saving.");
-  return;
-}
-
+  // helper: highlight required fields
   function markRequired(el, isBad) {
-  if (!el) return;
-  el.style.border = isBad ? "2px solid crimson" : "";
-}
+    if (!el) return;
+    el.style.border = isBad ? "2px solid crimson" : "";
+  }
 
-  const description = ($("je-desc")?.value || "").trim();
+  // REQUIRED header fields
+  const dateEl = $("je-date");
+  const refEl = $("je-ref");
+  const descEl = $("je-desc"); // only required if this exists in your HTML
+
+  const entry_date = dateEl?.value || "";
+  const ref = (refEl?.value || "").trim();
+  const description = descEl ? (descEl.value || "").trim() : "";
+
+  // mark required fields
+  markRequired(dateEl, !entry_date);
+  markRequired(refEl, !ref);
+  if (descEl) markRequired(descEl, !description);
+
+  // stop saving if required fields missing
+  if (!entry_date || !ref || (descEl && !description)) {
+    setStatus("Please fill all required (*) fields before saving.");
+    return;
+  }
+
+  // OPTIONAL header fields (only if present in HTML)
   const department = ($("je-dept")?.value || "").trim();
   const payment_method = ($("je-paymethod")?.value || "").trim();
   const client_vendor = ($("je-client")?.value || "").trim();
   const remarks = ($("je-remarks")?.value || "").trim();
-
-  if (!entry_date) return setStatus("Please set a Date.");
-  if (!ref) return setStatus("Please enter Ref No.");
 
   // Collect lines + validate
   const rows = [...$("je-lines").querySelectorAll("tr")];
@@ -371,7 +360,7 @@ if (!date || !ref || (descEl && !desc)) {
 
   if (entryErr) {
     if (entryErr.code === "23505") {
-      return setStatus("Save failed ❌ Ref No already exists for that date. Use a new Ref No.");
+      return setStatus("Save failed ❌ Ref No already exists. Use a new Ref No.");
     }
     console.error(entryErr);
     return setStatus("Save failed ❌ Policy/table error.");
