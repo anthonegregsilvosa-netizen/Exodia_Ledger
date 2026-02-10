@@ -277,11 +277,11 @@ window.saveJournal = async function () {
 
   // REQUIRED header fields
   const dateEl = $("je-date");
-  const refEl = $("je-ref");
-  const descEl = $("je-desc"); // only required if this exists in your HTML
+  const reference no.El = $("je-ref");
+  const descriptionEl = $("je-desc"); // only required if this exists in your HTML
 
   const entry_date = dateEl?.value || "";
-  const ref = (refEl?.value || "").trim();
+  const reference no. = (refEl?.value || "").trim();
   const description = descEl ? (descEl.value || "").trim() : "";
 
   // mark required fields
