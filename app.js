@@ -279,11 +279,7 @@ window.saveJournal = async function () {
   const dateEl = $("je-date");
   const refEl = $("je-ref");
   const descEl = $("je-desc"); // only required if this exists in your HTML
-
-const entry_date = $("je-date")?.value || "";
-const ref = ($("je-ref")?.value || "").trim();
-const description = ($("je-desc")?.value || "").trim();
-
+  
   // mark required fields
   markRequired(dateEl, !entry_date);
   markRequired(refEl, !ref);
