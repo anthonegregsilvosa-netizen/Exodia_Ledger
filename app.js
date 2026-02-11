@@ -269,29 +269,25 @@ window.addLine = function () {
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
-  // helper: highlight required fields
-  function markRequired(el, isBad) {
-    if (!el) return;
-    el.style.border = isBad ? "2px solid crimson" : "";
-  }
+  // ✅ REQUIRED FIELDS
+const entry_date = $("je-date")?.value || "";
+const ref = ($("je-ref")?.value || "").trim();
+const description = ($("je-desc")?.value || "").trim();
 
-  // REQUIRED header fields
-  const dateEl = $("je-date");
-  const refEl = $("je-ref");
-  const descEl = $("je-desc"); // only required if this exists in your HTML
-  
-  // mark required fields
-  markRequired(dateEl, !entry_date);
-  markRequired(refEl, !ref);
-  markRequired(descEl, !description);
+// highlight red borders if missing
+markRequired($("je-date"), !entry_date);
+markRequired($("je-ref"), !ref);
+markRequired($("je-desc"), !description);
 
-  // stop saving if required fields missing
-  if (!entry_date || !ref || !description) {
+// stop saving if missing required fields
+if (!entry_date || !ref || !description) {
   setStatus("Please fill all required (*) fields before saving.");
-  markRequired($("je-date"), !entry_date);
-  markRequired($("je-ref"), !ref);
-  markRequired($("je-desc"), !description);
   return;
+}
+
+  function markRequired(el, isBad) {
+  if (!el) return;
+  el.style.border = isBad ? "2px solid crimson" : "";
 }
 
   // OPTIONAL header fields (only if present in HTML)
@@ -734,3 +730,7 @@ function esc(s) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+["je-date", "je-ref", "je-desc"].forEach((id) => {
+  $(id)?.addEventListener("input", () => markRequired($(id), !($(id).value || "").trim()));
+});
