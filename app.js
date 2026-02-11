@@ -287,7 +287,7 @@ const description = ($("je-desc")?.value || "").trim();
   // mark required fields
   markRequired(dateEl, !entry_date);
   markRequired(refEl, !ref);
-  if (descEl) markRequired(descEl, !description);
+  markRequired(descEl, !description);
 
   // stop saving if required fields missing
   if (!entry_date || !ref || !description) {
