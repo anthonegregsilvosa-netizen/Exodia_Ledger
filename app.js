@@ -271,13 +271,13 @@ window.saveJournal = async function () {
 
   // ✅ REQUIRED FIELDS
 const entry_date = $("je-date")?.value || "";
-const ref = ($("je-ref")?.value || "").trim();
-const description = ($("je-desc")?.value || "").trim();
+const ref = ($("je-refno")?.value || "").trim();
+const description = ($("je-description")?.value || "").trim();
 
 // highlight red borders if missing
 markRequired($("je-date"), !entry_date);
-markRequired($("je-ref"), !ref);
-markRequired($("je-desc"), !description);
+markRequired($("je-refno"), !ref);
+markRequired($("je-description"), !description);
 
 // stop saving if missing required fields
 if (!entry_date || !ref || !description) {
