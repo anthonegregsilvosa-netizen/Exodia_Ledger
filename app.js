@@ -339,8 +339,9 @@ window.saveJournal = async function () {
 
   if (lineRows.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
-    return setStatus("Not balanced: Total Debit must equal Total Credit.");
-  }
+  setStatus("❌ Journal Entry is not balanced. Please match Debit and Credit.");
+  return;
+}
 
   // Insert header
   const { data: entry, error: entryErr } = await sb
