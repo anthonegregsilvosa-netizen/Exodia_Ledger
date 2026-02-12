@@ -12,7 +12,9 @@ const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 // Supabase Setup
 // ==============================
 const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==============================
@@ -173,6 +175,14 @@ async function loadLinesFromDb() {
 }
 
 // ==============================
+// Required-field helper (GLOBAL)
+// ==============================
+function markRequired(el, isBad) {
+  if (!el) return;
+  el.style.border = isBad ? "2px solid crimson" : "";
+}
+
+// ==============================
 // Filters (Year/Month)
 // ==============================
 window.applyDateFilter = function () {
@@ -269,26 +279,21 @@ window.addLine = function () {
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
-  // ✅ REQUIRED FIELDS
-const entry_date = $("je-date")?.value || "";
-const ref = ($("je-refno")?.value || "").trim();
-const description = ($("je-description")?.value || "").trim();
+  // ✅ REQUIRED FIELDS (match your HTML IDs)
+  const entry_date = $("je-date")?.value || "";
+  const ref = ($("je-refno")?.value || "").trim();
+  const description = ($("je-description")?.value || "").trim();
 
-// highlight red borders if missing
-markRequired($("je-date"), !entry_date);
-markRequired($("je-refno"), !ref);
-markRequired($("je-description"), !description);
+  // highlight red borders if missing
+  markRequired($("je-date"), !entry_date);
+  markRequired($("je-refno"), !ref);
+  markRequired($("je-description"), !description);
 
-// stop saving if missing required fields
-if (!entry_date || !ref || !description) {
-  setStatus("Please fill all required (*) fields before saving.");
-  return;
-}
-
-  function markRequired(el, isBad) {
-  if (!el) return;
-  el.style.border = isBad ? "2px solid crimson" : "";
-}
+  // stop saving if missing required fields
+  if (!entry_date || !ref || !description) {
+    setStatus("Please fill all required (*) fields before saving.");
+    return;
+  }
 
   // OPTIONAL header fields (only if present in HTML)
   const department = ($("je-dept")?.value || "").trim();
@@ -314,7 +319,7 @@ if (!entry_date || !ref || !description) {
     if (!accountId) return;
     if (!d && !c) return;
 
-    const acct = COA.find(a => a.id === accountId);
+    const acct = COA.find((a) => a.id === accountId);
     const accountName = acct ? `${acct.code} - ${acct.name}` : "";
 
     totalDebit += d;
@@ -340,16 +345,18 @@ if (!entry_date || !ref || !description) {
   // Insert header
   const { data: entry, error: entryErr } = await sb
     .from("journal_entries")
-    .insert([{
-      user_id: currentUser.id,
-      entry_date,
-      ref,
-      description,
-      department,
-      payment_method,
-      client_vendor,
-      remarks
-    }])
+    .insert([
+      {
+        user_id: currentUser.id,
+        entry_date,
+        ref,
+        description,
+        department,
+        payment_method,
+        client_vendor,
+        remarks,
+      },
+    ])
     .select("id")
     .single();
 
@@ -363,7 +370,7 @@ if (!entry_date || !ref || !description) {
 
   // Insert lines linked to header
   const journal_id = entry.id;
-  const finalLines = lineRows.map(r => ({ ...r, journal_id }));
+  const finalLines = lineRows.map((r) => ({ ...r, journal_id }));
 
   try {
     await sbInsertJournalLines(finalLines);
@@ -731,6 +738,11 @@ function esc(s) {
     .replaceAll("'", "&#039;");
 }
 
-["je-date", "je-ref", "je-desc"].forEach((id) => {
-  $(id)?.addEventListener("input", () => markRequired($(id), !($(id).value || "").trim()));
+// ✅ Live red-border validation for required fields
+["je-date", "je-refno", "je-description"].forEach((id) => {
+  $(id)?.addEventListener("input", () => {
+    const el = $(id);
+    const val = (el?.value || "").trim();
+    markRequired(el, !val);
+  });
 });
