@@ -138,6 +138,9 @@ window.signOut = async function signOut() {
 function normalizeLine(row) {
   return {
     id: row.id,
+    journal_id: row.journal_id || null,
+    is_deleted: row.is_deleted ?? false,
+
     entry_date: row.entry_date,
     ref: row.ref,
     accountId: row.account_id,
@@ -472,7 +475,8 @@ function renderLedger() {
   const normal = acct?.normal || "Debit";
 
   const acctLines = lines
-    .filter((l) => l.accountId === accountId)
+  .filter((l) => !l.is_deleted)
+  .filter((l) => l.accountId === accountId)
     .filter((l) => {
       const d = String(l.entry_date || "");
       if (filterYear && !d.startsWith(filterYear)) return false;
@@ -521,7 +525,8 @@ function computeBalances() {
   const balances = {};
 
   lines
-    .filter((l) => {
+  .filter((l) => !l.is_deleted)
+  .filter((l) => {
       const d = String(l.entry_date || "");
       if (filterYear && !d.startsWith(filterYear)) return false;
       if (filterMonth && Number(d.slice(5, 7)) !== Number(filterMonth)) return false;
