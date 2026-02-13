@@ -499,14 +499,22 @@ function renderLedger() {
 
     running += delta;
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${esc(l.entry_date)}</td>
-      <td>${esc(l.ref)}</td>
-      <td style="text-align:right;">${money(l.debit)}</td>
-      <td style="text-align:right;">${money(l.credit)}</td>
-      <td style="text-align:right;">${money(running)}</td>
-    `;
+    const canEdit = !!l.journal_id;
+tr.innerHTML = `
+  <td>${esc(l.entry_date)}</td>
+  <td>${esc(l.ref)}</td>
+  <td style="text-align:right;">${money(l.debit)}</td>
+  <td style="text-align:right;">${money(l.credit)}</td>
+  <td style="text-align:right;">${money(running)}</td>
+  <td>
+    ${
+      canEdit
+        ? `<a href="./edit.html?journal_id=${encodeURIComponent(l.journal_id)}&account_id=${encodeURIComponent(accountId)}">Edit / Delete</a>`
+        : `<span class="muted">N/A</span>`
+    }
+  </td>
+`;
+
     tbody.appendChild(tr);
   });
 
