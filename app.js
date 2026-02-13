@@ -491,32 +491,37 @@ function renderLedger() {
 
   let running = 0;
 
-  acctLines.forEach((l) => {
-    const delta =
-      normal === "Credit"
-        ? num(l.credit) - num(l.debit)
-        : num(l.debit) - num(l.credit);
+  let running = 0;
 
-    running += delta;
+acctLines.forEach((l) => {
+  const delta =
+    normal === "Credit"
+      ? num(l.credit) - num(l.debit)
+      : num(l.debit) - num(l.credit);
 
-    const canEdit = !!l.journal_id;
-tr.innerHTML = `
-  <td>${esc(l.entry_date)}</td>
-  <td>${esc(l.ref)}</td>
-  <td style="text-align:right;">${money(l.debit)}</td>
-  <td style="text-align:right;">${money(l.credit)}</td>
-  <td style="text-align:right;">${money(running)}</td>
-  <td>
-    ${
-      canEdit
-        ? `<a href="./edit.html?journal_id=${encodeURIComponent(l.journal_id)}&account_id=${encodeURIComponent(accountId)}">Edit / Delete</a>`
-        : `<span class="muted">N/A</span>`
-    }
-  </td>
-`;
+  running += delta;
 
-    tbody.appendChild(tr);
-  });
+  const tr = document.createElement("tr"); // ✅ THIS WAS MISSING
+
+  const canEdit = !!l.journal_id;
+
+  tr.innerHTML = `
+    <td>${esc(l.entry_date)}</td>
+    <td>${esc(l.ref)}</td>
+    <td style="text-align:right;">${money(l.debit)}</td>
+    <td style="text-align:right;">${money(l.credit)}</td>
+    <td style="text-align:right;">${money(running)}</td>
+    <td>
+      ${
+        canEdit
+          ? `<a href="./edit.html?journal_id=${encodeURIComponent(l.journal_id)}&account_id=${encodeURIComponent(accountId)}">Edit / Delete</a>`
+          : `<span class="muted">N/A</span>`
+      }
+    </td>
+  `;
+
+  tbody.appendChild(tr);
+});
 
   if (acctLines.length === 0) {
     const tr = document.createElement("tr");
