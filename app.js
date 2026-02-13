@@ -491,8 +491,6 @@ function renderLedger() {
 
   let running = 0;
 
-  let running = 0;
-
 acctLines.forEach((l) => {
   const delta =
     normal === "Credit"
@@ -525,7 +523,7 @@ acctLines.forEach((l) => {
 
   if (acctLines.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="5">No transactions for this account (with current filter).</td>`;
+    tr.innerHTML = `<td colspan="6">No transactions for this account (with current filter).</td>`;
     tbody.appendChild(tr);
   }
 }
