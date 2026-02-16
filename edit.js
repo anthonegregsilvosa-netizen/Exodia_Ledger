@@ -152,7 +152,7 @@ async function loadJournal() {
     return;
   }
 
-  $("meta").textContent = `Journal ID: ${journalId}`;
+  $("meta").textContent = "Editing Journal Entry";
 
   $("e-date").value = entry.entry_date || "";
   $("e-ref").value = entry.ref || "";
