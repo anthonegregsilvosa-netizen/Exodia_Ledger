@@ -237,20 +237,60 @@ window.addLine = function () {
 
   const tr = document.createElement("tr");
 
-  const select = document.createElement("select");
-  select.style.width = "420px";
+ // --- Searchable account picker (datalist) ---
+const wrap = document.createElement("div");
+wrap.style.display = "grid";
+wrap.style.gap = "6px";
 
-  const opt0 = document.createElement("option");
-  opt0.value = "";
-  opt0.textContent = "Select account...";
-  select.appendChild(opt0);
+// visible search input
+const acctInput = document.createElement("input");
+acctInput.placeholder = "Type to search account (code or name)...";
+acctInput.style.width = "420px";
 
-  const sortedForDropdown = [...COA].sort((a, b) => {
+// hidden account_id storage (this is what we save)
+const acctId = document.createElement("input");
+acctId.type = "hidden";
+
+// datalist (options)
+const listId = "coa-datalist";
+acctInput.setAttribute("list", listId);
+
+let dl = document.getElementById(listId);
+if (!dl) {
+  dl = document.createElement("datalist");
+  dl.id = listId;
+
+  const sorted = [...COA].sort((a, b) => {
     const ca = codeNum(a.code);
     const cb = codeNum(b.code);
     if (ca !== cb) return ca - cb;
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
+
+  sorted.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = `${a.code} - ${a.name}`;
+    opt.dataset.id = a.id; // not reliable in all browsers, we’ll map below
+    dl.appendChild(opt);
+  });
+
+  document.body.appendChild(dl);
+}
+
+// map text -> id
+function textToAccountId(text) {
+  const t = String(text || "").trim().toLowerCase();
+  const found = COA.find(a => (`${a.code} - ${a.name}`).toLowerCase() === t);
+  return found ? found.id : "";
+}
+
+// when user types/selects a value
+acctInput.addEventListener("input", () => {
+  acctId.value = textToAccountId(acctInput.value);
+});
+
+wrap.appendChild(acctInput);
+wrap.appendChild(acctId);
 
   sortedForDropdown.forEach((a) => {
     const opt = document.createElement("option");
@@ -271,7 +311,7 @@ window.addLine = function () {
   delBtn.textContent = "X";
   delBtn.onclick = () => tr.remove();
 
-  tr.appendChild(tdWrap(select));
+  tr.appendChild(tdWrap(wrap));
   tr.appendChild(tdWrap(debit, true));
   tr.appendChild(tdWrap(credit, true));
   tr.appendChild(tdWrap(delBtn, true));
@@ -312,10 +352,10 @@ window.saveJournal = async function () {
   let totalCredit = 0;
 
   rows.forEach((r) => {
-    const sel = r.querySelector("select");
+    const hidden = r.querySelector('input[type="hidden"]');
     const inputs = r.querySelectorAll("input");
 
-    const accountId = sel?.value || "";
+    const accountId = hidden?.value || "";
     const d = parseMoney(inputs[0]?.value);
     const c = parseMoney(inputs[1]?.value);
 
