@@ -237,68 +237,59 @@ window.addLine = function () {
 
   const tr = document.createElement("tr");
 
- // --- Searchable account picker (datalist) ---
-const wrap = document.createElement("div");
-wrap.style.display = "grid";
-wrap.style.gap = "6px";
+  // --- Searchable account picker (datalist) ---
+  const wrap = document.createElement("div");
+  wrap.style.display = "grid";
+  wrap.style.gap = "6px";
 
-// visible search input
-const acctInput = document.createElement("input");
-acctInput.placeholder = "Type to search account (code or name)...";
-acctInput.style.width = "420px";
+  const acctInput = document.createElement("input");
+  acctInput.placeholder = "Type to search account (code or name)...";
+  acctInput.style.width = "420px";
 
-// hidden account_id storage (this is what we save)
-const acctId = document.createElement("input");
-acctId.type = "hidden";
+  const acctId = document.createElement("input");
+  acctId.type = "hidden";
 
-// datalist (options)
-const listId = "coa-datalist";
-acctInput.setAttribute("list", listId);
+  const listId = "coa-datalist";
+  acctInput.setAttribute("list", listId);
 
-let dl = document.getElementById(listId);
-if (!dl) {
-  dl = document.createElement("datalist");
-  dl.id = listId;
+  // Create datalist ONCE
+  let dl = document.getElementById(listId);
+  if (!dl) {
+    dl = document.createElement("datalist");
+    dl.id = listId;
 
-  const sorted = [...COA].sort((a, b) => {
-    const ca = codeNum(a.code);
-    const cb = codeNum(b.code);
-    if (ca !== cb) return ca - cb;
-    return String(a.name || "").localeCompare(String(b.name || ""));
+    const sorted = [...COA].sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+    sorted.forEach((a) => {
+      const opt = document.createElement("option");
+      opt.value = `${a.code} - ${a.name}`;
+      dl.appendChild(opt);
+    });
+
+    document.body.appendChild(dl);
+  }
+
+  function textToAccountId(text) {
+    const t = String(text || "").trim().toLowerCase();
+    const found = COA.find(
+      (a) => (`${a.code} - ${a.name}`).toLowerCase() === t
+    );
+    return found ? found.id : "";
+  }
+
+  acctInput.addEventListener("input", () => {
+    acctId.value = textToAccountId(acctInput.value);
   });
 
-  sorted.forEach((a) => {
-    const opt = document.createElement("option");
-    opt.value = `${a.code} - ${a.name}`;
-    opt.dataset.id = a.id; // not reliable in all browsers, we’ll map below
-    dl.appendChild(opt);
-  });
+  wrap.appendChild(acctInput);
+  wrap.appendChild(acctId);
 
-  document.body.appendChild(dl);
-}
-
-// map text -> id
-function textToAccountId(text) {
-  const t = String(text || "").trim().toLowerCase();
-  const found = COA.find(a => (`${a.code} - ${a.name}`).toLowerCase() === t);
-  return found ? found.id : "";
-}
-
-// when user types/selects a value
-acctInput.addEventListener("input", () => {
-  acctId.value = textToAccountId(acctInput.value);
-});
-
-wrap.appendChild(acctInput);
-wrap.appendChild(acctId);
-
-  sortedForDropdown.forEach((a) => {
-    const opt = document.createElement("option");
-    opt.value = a.id;
-    opt.textContent = `${a.code} - ${a.name}`;
-    select.appendChild(opt);
-  });
-
+  // Debit/Credit inputs
   const debit = document.createElement("input");
   debit.placeholder = "0.00";
   debit.style.width = "140px";
@@ -353,11 +344,16 @@ window.saveJournal = async function () {
 
   rows.forEach((r) => {
     const hidden = r.querySelector('input[type="hidden"]');
-    const inputs = r.querySelectorAll("input");
+const tds = r.querySelectorAll("td");
 
-    const accountId = hidden?.value || "";
-    const d = parseMoney(inputs[0]?.value);
-    const c = parseMoney(inputs[1]?.value);
+const accountId = hidden?.value || "";
+
+// debit/credit are in column 2 and 3
+const debitInput = tds[1]?.querySelector("input");
+const creditInput = tds[2]?.querySelector("input");
+
+const d = parseMoney(debitInput?.value);
+const c = parseMoney(creditInput?.value);
 
     if (!accountId) return;
     if (!d && !c) return;
