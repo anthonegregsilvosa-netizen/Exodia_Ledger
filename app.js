@@ -246,6 +246,7 @@ window.addLine = function () {
   acctInput.placeholder = "Type to search account (code or name)...";
   acctInput.style.width = "420px";
 
+  // hidden account_id storage (this is what we save)
   const acctId = document.createElement("input");
   acctId.type = "hidden";
 
@@ -274,6 +275,7 @@ window.addLine = function () {
     document.body.appendChild(dl);
   }
 
+  // map "CODE - NAME" -> id
   function textToAccountId(text) {
     const t = String(text || "").trim().toLowerCase();
     const found = COA.find(
@@ -282,6 +284,7 @@ window.addLine = function () {
     return found ? found.id : "";
   }
 
+  // when user types/selects a value
   acctInput.addEventListener("input", () => {
     acctId.value = textToAccountId(acctInput.value);
   });
