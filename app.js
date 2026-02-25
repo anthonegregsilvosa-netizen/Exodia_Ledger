@@ -1014,3 +1014,60 @@ function esc(s) {
     markRequired(el, !val);
   });
 });
+
+// ==============================
+// IMPORT COA FROM JSON INTO SUPABASE (ONE-TIME MIGRATION)
+// Fixes: "only my added account shows"
+// ==============================
+window.importCOAFromJsonIntoDb = async function importCOAFromJsonIntoDb() {
+  if (!currentUser) return alert("Login first.");
+
+  // 1) Load coa.json
+  let json = [];
+  try {
+    json = await fetch("./data/coa.json").then((r) => r.json());
+  } catch (e) {
+    console.error(e);
+    return alert("❌ Cannot load ./data/coa.json. Make sure it exists in your GitHub Pages.");
+  }
+
+  if (!Array.isArray(json) || json.length === 0) {
+    return alert("❌ coa.json is empty or invalid.");
+  }
+
+  // 2) Convert JSON to DB rows
+  const rows = json
+    .map((a) => ({
+      user_id: currentUser.id,
+      code: String(a.code || "").trim(),
+      name: String(a.name || "").trim(),
+      type: String(a.type || "").trim(),
+      normal: String(a.normal || "").trim(),
+      is_deleted: false,
+    }))
+    .filter((r) => r.code && r.name && r.type && r.normal);
+
+  // 3) Upsert (merge by unique user_id+code)
+  const { error } = await sb
+    .from("coa_accounts")
+    .upsert(rows, { onConflict: "user_id,code" });
+
+  if (error) {
+    console.error(error);
+    return alert("❌ Import failed. Check RLS + unique index on (user_id, code).");
+  }
+
+  // 4) Reload UI
+  COA = await sbFetchCOA();
+  refreshCoaDatalist();
+
+  // force ledger dropdown rebuild
+  const ledgerSel = $("ledger-account");
+  if (ledgerSel) ledgerSel.innerHTML = "";
+
+  renderCOA();
+  renderLedger();
+  renderTrialBalance();
+
+  alert(`✅ Imported ${rows.length} accounts into Supabase!`);
+};
