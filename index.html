@@ -166,6 +166,8 @@
 <label style="grid-column:1 / span 2;">
   Department / Cost Center:
   <input type="text" id="je-dept">
+</label>
+
 <label style="grid-column:1 / span 2;">
   Payment Method:
   <input type="text" id="je-paymethod">
@@ -186,13 +188,15 @@
 
     <table border="1" cellpadding="6">
       <thead>
-        <tr>
-          <th>Account</th>
-          <th>Debit</th>
-          <th>Credit</th>
-          <th></th>
-        </tr>
-      </thead>
+  <tr>
+    <th>Code</th>
+    <th>Account Name</th>
+    <th>Type</th>
+    <th>Normal</th>
+    <th>Balance</th>
+    <th>Actions</th>
+  </tr>
+</thead>
       <tbody id="je-lines"></tbody>
     </table>
 
