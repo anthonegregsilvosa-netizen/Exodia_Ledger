@@ -6,7 +6,7 @@
 const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
-const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
+const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1"; // ✅ keep ONE value only
 
 // ==============================
 // Supabase Setup
@@ -179,8 +179,6 @@ async function loadLinesFromDb() {
 
 // ==============================
 // Supabase helpers (CHART OF ACCOUNTS)
-// NOTE: Requires a table named: "coa_accounts"
-// Columns expected: id (uuid), user_id (uuid), code (text), name (text), type (text), normal (text), is_deleted (bool)
 // ==============================
 function normalizeCOA(row) {
   return {
@@ -234,10 +232,9 @@ async function loadCOAFromDbOrJson() {
     console.warn("COA DB load failed (will fallback to JSON):", e);
   }
 
-  // 2) Fallback to JSON (your old way)
+  // 2) Fallback to JSON (old way)
   try {
     const json = await fetch("./data/coa.json").then((r) => r.json());
-    // Ensure each has id (if your JSON doesn't have id, this will be a problem for saving lines)
     return Array.isArray(json) ? json : [];
   } catch (e) {
     console.warn("COA JSON load failed:", e);
@@ -332,28 +329,42 @@ window.filterCOA = function (type) {
 };
 
 // ==============================
-// COA ADD / EDIT (Prompt based — no HTML changes required)
-// You can call from console or add buttons in HTML:
-// <button onclick="addAccountPrompt()">Add Account</button>
+// ✅ NEW: COA ADD (FROM HTML FORM IF EXISTS)
+// If your HTML has inputs: coa-code, coa-name, coa-type, coa-normal,
+// this will use them. If not found, it falls back to prompt.
 // ==============================
-window.addAccountPrompt = async function addAccountPrompt() {
+window.addCOAAccount = async function addCOAAccount() {
   if (!currentUser) return alert("Please login first.");
 
-  // Basic prompts
-  const code = (prompt("Account Code (e.g., 1001):") || "").trim();
-  if (!code) return;
+  const codeEl = $("coa-code");
+  const nameEl = $("coa-name");
+  const typeEl = $("coa-type");
+  const normalEl = $("coa-normal");
 
-  const name = (prompt("Account Name:") || "").trim();
-  if (!name) return;
+  // If form exists, use it; else fallback to prompts
+  let code = (codeEl?.value || "").trim();
+  let name = (nameEl?.value || "").trim();
+  let type = (typeEl?.value || "").trim();
+  let normal = (normalEl?.value || "").trim();
 
-  const type = (prompt("Account Type (Asset/Liability/Equity/Revenue/Expense):") || "").trim();
-  if (!type) return;
-
-  const normal = (prompt("Normal (Debit/Credit):") || "").trim();
-  if (!normal) return;
+  if (!codeEl || !nameEl || !typeEl || !normalEl) {
+    code = (prompt("Account Code (e.g., 1001):") || "").trim();
+    if (!code) return;
+    name = (prompt("Account Name:") || "").trim();
+    if (!name) return;
+    type = (prompt("Account Type (Asset/Liability/Equity/Revenue/Expense):") || "").trim();
+    if (!type) return;
+    normal = (prompt("Normal (Debit/Credit):") || "").trim();
+    if (!normal) return;
+  } else {
+    markRequired(codeEl, !code);
+    markRequired(nameEl, !name);
+    markRequired(typeEl, !type);
+    markRequired(normalEl, !normal);
+    if (!code || !name || !type || !normal) return;
+  }
 
   try {
-    // Insert into DB
     await sbInsertCOA({
       user_id: currentUser.id,
       code,
@@ -363,36 +374,110 @@ window.addAccountPrompt = async function addAccountPrompt() {
       is_deleted: false,
     });
 
-    // Reload COA
+    // clear form inputs (if present)
+    if (codeEl) codeEl.value = "";
+    if (nameEl) nameEl.value = "";
+
     COA = await sbFetchCOA();
     refreshCoaDatalist();
+    refreshLedgerAccountSelect(true);
+
     renderCOA();
+    renderLedger();
+    renderTrialBalance();
     alert("✅ Account added!");
   } catch (e) {
     console.error(e);
-    alert("❌ Failed to add account. Check table/policies/unique rules.");
+    alert("❌ Failed to add account. (Code might already exist, or RLS policy issue.)");
   }
 };
 
-window.editAccountPrompt = async function editAccountPrompt(accountId) {
-  if (!currentUser) return alert("Please login first.");
-  const acct = COA.find((a) => a.id === accountId);
-  if (!acct) return alert("Account not found.");
+// ==============================
+// ✅ NEW: INLINE EDIT COA NAME (Edit / Save / Cancel)
+// ==============================
+window.startEditCOAName = function startEditCOAName(accountId) {
+  const row = document.querySelector(`[data-coa-row='${CSS.escape(accountId)}']`);
+  if (!row) return;
 
-  const newName = (prompt(`Edit Account Name for ${acct.code} - ${acct.name}:`, acct.name) || "").trim();
-  if (!newName) return;
+  row.querySelector(".coa-name-view")?.style && (row.querySelector(".coa-name-view").style.display = "none");
+  row.querySelector(".coa-name-edit")?.style && (row.querySelector(".coa-name-edit").style.display = "inline-block");
+  row.querySelector(".coa-actions-view")?.style && (row.querySelector(".coa-actions-view").style.display = "none");
+  row.querySelector(".coa-actions-edit")?.style && (row.querySelector(".coa-actions-edit").style.display = "inline-block");
+
+  const input = row.querySelector("input[data-coa-edit-name]");
+  if (input) {
+    input.focus();
+    input.select();
+  }
+};
+
+window.cancelEditCOAName = function cancelEditCOAName(accountId) {
+  renderCOA(); // simplest + restores original value from COA array
+};
+
+window.saveEditCOAName = async function saveEditCOAName(accountId) {
+  if (!currentUser) return alert("Please login first.");
+
+  const row = document.querySelector(`[data-coa-row='${CSS.escape(accountId)}']`);
+  if (!row) return;
+
+  const input = row.querySelector("input[data-coa-edit-name]");
+  const newName = (input?.value || "").trim();
+  if (!newName) {
+    markRequired(input, true);
+    return;
+  }
 
   try {
-    await sbUpdateCOA(accountId, { name: newName });
+    await sbUpdateCOA(accountId, { name: newName, updated_at: new Date().toISOString() });
+
     COA = await sbFetchCOA();
     refreshCoaDatalist();
+    refreshLedgerAccountSelect(true);
+
     renderCOA();
-    alert("✅ Account updated!");
+    renderLedger();
+    renderTrialBalance();
   } catch (e) {
     console.error(e);
-    alert("❌ Failed to update. Check policies.");
+    alert("❌ Failed to update account name. Check RLS update policy.");
   }
 };
+
+// ==============================
+// ✅ NEW: refresh ledger dropdown anytime COA changes
+// ==============================
+function refreshLedgerAccountSelect(force = false) {
+  const sel = $("ledger-account");
+  if (!sel) return;
+
+  const keep = sel.value || localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
+
+  if (!force && sel.options.length > 0) return;
+
+  sel.innerHTML = "";
+
+  const o0 = document.createElement("option");
+  o0.value = "";
+  o0.textContent = "Select account...";
+  sel.appendChild(o0);
+
+  const sorted = [...COA].sort((a, b) => {
+    const ca = codeNum(a.code);
+    const cb = codeNum(b.code);
+    if (ca !== cb) return ca - cb;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  sorted.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.code} - ${a.name}`;
+    sel.appendChild(opt);
+  });
+
+  if (keep) sel.value = keep;
+}
 
 // ==============================
 // Journal Entry
@@ -448,23 +533,21 @@ window.addLine = function () {
 window.saveJournal = async function () {
   if (!currentUser) return setStatus("Please login first.");
 
-  // ✅ REQUIRED FIELDS (match your HTML IDs)
+  // ✅ REQUIRED FIELDS
   const entry_date = $("je-date")?.value || "";
   const ref = ($("je-refno")?.value || "").trim();
   const description = ($("je-description")?.value || "").trim();
 
-  // highlight red borders if missing
   markRequired($("je-date"), !entry_date);
   markRequired($("je-refno"), !ref);
   markRequired($("je-description"), !description);
 
-  // stop saving if missing required fields
   if (!entry_date || !ref || !description) {
     setStatus("Please fill all required (*) fields before saving.");
     return;
   }
 
-  // OPTIONAL header fields (only if present in HTML)
+  // OPTIONAL header fields
   const department = ($("je-dept")?.value || "").trim();
   const payment_method = ($("je-paymethod")?.value || "").trim();
   const client_vendor = ($("je-client")?.value || "").trim();
@@ -483,7 +566,6 @@ window.saveJournal = async function () {
 
     const accountId = hidden?.value || "";
 
-    // debit/credit are in column 2 and 3
     const debitInput = tds[1]?.querySelector("input");
     const creditInput = tds[2]?.querySelector("input");
 
@@ -501,7 +583,7 @@ window.saveJournal = async function () {
 
     lineRows.push({
       user_id: currentUser.id,
-      journal_id: null, // fill after header insert
+      journal_id: null,
       entry_date,
       ref,
       account_id: accountId,
@@ -594,17 +676,29 @@ function renderCOA() {
   list.forEach((a) => {
     const bal = balances[a.id] || 0;
     const tr = document.createElement("tr");
+    tr.setAttribute("data-coa-row", a.id);
+
     tr.innerHTML = `
       <td>${esc(a.code)}</td>
-      <td>${esc(a.name)}</td>
+      <td>
+        <span class="coa-name-view">${esc(a.name)}</span>
+        <input class="coa-name-edit" data-coa-edit-name value="${esc(a.name)}" style="display:none; width: 100%; max-width: 360px;" />
+      </td>
       <td>${esc(a.type)}</td>
       <td>${esc(a.normal)}</td>
       <td style="text-align:right;">${money(bal)}</td>
-      <td>
-       <button onclick="addAccountPrompt()">+ Add Account</button>
-       <button onclick="editAccountPrompt('${a.id}')">Edit Name</button>
+      <td style="white-space:nowrap;">
+        <button onclick="addCOAAccount()">+ Add Account</button>
+        <span class="coa-actions-view">
+          <button onclick="startEditCOAName('${a.id}')">Edit</button>
+        </span>
+        <span class="coa-actions-edit" style="display:none;">
+          <button onclick="saveEditCOAName('${a.id}')">Save</button>
+          <button onclick="cancelEditCOAName('${a.id}')">Cancel</button>
+        </span>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 }
@@ -617,29 +711,8 @@ function renderLedger() {
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  if (sel.options.length === 0) {
-    const o0 = document.createElement("option");
-    o0.value = "";
-    o0.textContent = "Select account...";
-    sel.appendChild(o0);
-
-    const sorted = [...COA].sort((a, b) => {
-      const ca = codeNum(a.code);
-      const cb = codeNum(b.code);
-      if (ca !== cb) return ca - cb;
-      return String(a.name || "").localeCompare(String(b.name || ""));
-    });
-
-    sorted.forEach((a) => {
-      const opt = document.createElement("option");
-      opt.value = a.id;
-      opt.textContent = `${a.code} - ${a.name}`;
-      sel.appendChild(opt);
-    });
-
-    const savedAcct = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
-    if (savedAcct) sel.value = savedAcct;
-  }
+  // ✅ always refresh options when COA changes
+  if (sel.options.length === 0) refreshLedgerAccountSelect(true);
 
   tbody.innerHTML = "";
   const accountId = sel.value;
@@ -813,6 +886,7 @@ async function initAppAfterLogin() {
   // Load COA (DB first, fallback JSON)
   COA = await loadCOAFromDbOrJson();
   refreshCoaDatalist();
+  refreshLedgerAccountSelect(true);
 
   lines = await loadLinesFromDb();
 
@@ -848,14 +922,14 @@ async function initAppAfterLogin() {
 
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
-    addLine();
-    addLine();
+    window.addLine();
+    window.addLine();
   }
 
-  applyDateFilter();
+  window.applyDateFilter();
 
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
-  show(lastView);
+  window.show(lastView);
 }
 
 // ==============================
@@ -881,7 +955,7 @@ async function initAppAfterLogin() {
 })();
 
 // ==============================
-// Helpers / Utils
+// Helpers / Utils (KEEP ONE COPY ONLY)
 // ==============================
 function tdWrap(el, right = false) {
   const td = document.createElement("td");
