@@ -15,6 +15,12 @@ const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
 
+// IMPORTANT: your index.html loads supabase-js first then app.js
+// so window.supabase should exist.
+if (!window.supabase) {
+  alert("Supabase library not loaded. Check script tag order in index.html.");
+}
+
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ==============================
@@ -206,7 +212,11 @@ async function sbFetchCOA() {
     .eq("is_deleted", false)
     .order("code", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error("COA fetch error:", error);
+    return [];
+  }
+
   return (data || []).map(normalizeCOA);
 }
 
@@ -229,61 +239,22 @@ async function sbUpdateCOA(id, patch) {
   if (error) throw error;
 }
 
-// ==============================
-// ✅ FIX: One-time seed JSON COA into Supabase
-// This prevents your COA table from shrinking to 1 record after adding.
-// ==============================
-async function ensureCOASeeded() {
-  if (!currentUser) return [];
+// If DB has no COA yet, fallback to JSON for viewing (NOT saving)
+async function loadCOAFromDbOrJson() {
+  const db = await sbFetchCOA();
+  if (db.length > 0) return db;
 
-  // Check DB first
-  let dbCOA = [];
   try {
-    dbCOA = await sbFetchCOA();
-    if (dbCOA.length > 0) return dbCOA;
+    const json = await fetch("./data/coa.json").then((r) => r.json());
+    return Array.isArray(json) ? json : [];
   } catch (e) {
-    console.warn("DB COA fetch failed, will try JSON seed:", e);
-  }
-
-  // If DB empty -> load JSON
-  let json = [];
-  try {
-    json = await fetch("./data/coa.json").then((r) => r.json());
-    if (!Array.isArray(json) || json.length === 0) return [];
-  } catch (e) {
-    console.warn("Failed to load coa.json:", e);
+    console.warn("COA JSON load failed:", e);
     return [];
   }
-
-  // Prepare rows for DB
-  const rows = json
-    .map((a) => ({
-      user_id: currentUser.id,
-      code: String(a.code || "").trim(),
-      name: String(a.name || "").trim(),
-      type: String(a.type || "").trim(),
-      normal: String(a.normal || "").trim(),
-      is_deleted: false,
-    }))
-    .filter((r) => r.code && r.name && r.type && r.normal);
-
-  if (rows.length === 0) return [];
-
-  // Upsert to avoid duplicates (requires unique index on user_id+code)
-  const { error } = await sb
-    .from("coa_accounts")
-    .upsert(rows, { onConflict: "user_id,code" });
-
-  if (error) {
-    console.error("COA seed upsert failed:", error);
-  }
-
-  // Return DB COA after seeding
-  return await sbFetchCOA();
 }
 
 // ==============================
-// Required-field helper (GLOBAL)
+// Required-field helper
 // ==============================
 function markRequired(el, isBad) {
   if (!el) return;
@@ -369,7 +340,7 @@ window.filterCOA = function (type) {
 };
 
 // ==============================
-// ✅ Add Account (from your COA form in HTML)
+// Add Account (from your COA form in HTML)
 // ==============================
 window.addCOAAccount = async function addCOAAccount() {
   if (!currentUser) return alert("Please login first.");
@@ -386,10 +357,8 @@ window.addCOAAccount = async function addCOAAccount() {
 
   markRequired(codeEl, !code);
   markRequired(nameEl, !name);
-  markRequired(typeEl, !type);
-  markRequired(normalEl, !normal);
 
-  if (!code || !name || !type || !normal) return;
+  if (!code || !name) return;
 
   try {
     await sbInsertCOA({
@@ -407,7 +376,7 @@ window.addCOAAccount = async function addCOAAccount() {
     COA = await sbFetchCOA();
     refreshCoaDatalist();
 
-    // refresh ledger dropdown options
+    // force ledger dropdown rebuild
     const ledgerSel = $("ledger-account");
     if (ledgerSel) ledgerSel.innerHTML = "";
 
@@ -418,79 +387,7 @@ window.addCOAAccount = async function addCOAAccount() {
     alert("✅ Account added!");
   } catch (e) {
     console.error(e);
-    alert("❌ Failed to add account. (Code might already exist.)");
-  }
-};
-
-// ==============================
-// Keep your prompt-based tools too (optional)
-// ==============================
-window.addAccountPrompt = async function addAccountPrompt() {
-  if (!currentUser) return alert("Please login first.");
-
-  const code = (prompt("Account Code (e.g., 1001):") || "").trim();
-  if (!code) return;
-
-  const name = (prompt("Account Name:") || "").trim();
-  if (!name) return;
-
-  const type = (prompt("Account Type (Asset/Liability/Equity/Revenue/Expense):") || "").trim();
-  if (!type) return;
-
-  const normal = (prompt("Normal (Debit/Credit):") || "").trim();
-  if (!normal) return;
-
-  try {
-    await sbInsertCOA({
-      user_id: currentUser.id,
-      code,
-      name,
-      type,
-      normal,
-      is_deleted: false,
-    });
-
-    COA = await sbFetchCOA();
-    refreshCoaDatalist();
-
-    const ledgerSel = $("ledger-account");
-    if (ledgerSel) ledgerSel.innerHTML = "";
-
-    renderCOA();
-    renderLedger();
-    renderTrialBalance();
-
-    alert("✅ Account added!");
-  } catch (e) {
-    console.error(e);
-    alert("❌ Failed to add account. Check unique code/policies.");
-  }
-};
-
-window.editAccountPrompt = async function editAccountPrompt(accountId) {
-  if (!currentUser) return alert("Please login first.");
-  const acct = COA.find((a) => a.id === accountId);
-  if (!acct) return alert("Account not found.");
-
-  const newName = (prompt(`Edit Account Name for ${acct.code} - ${acct.name}:`, acct.name) || "").trim();
-  if (!newName) return;
-
-  try {
-    await sbUpdateCOA(accountId, { name: newName, updated_at: new Date().toISOString() });
-    COA = await sbFetchCOA();
-    refreshCoaDatalist();
-
-    const ledgerSel = $("ledger-account");
-    if (ledgerSel) ledgerSel.innerHTML = "";
-
-    renderCOA();
-    renderLedger();
-    renderTrialBalance();
-
-    alert("✅ Account updated!");
-  } catch (e) {
-    console.error(e);
-    alert("❌ Failed to update. Check policies.");
+    alert("❌ Failed to add account (maybe duplicate code).");
   }
 };
 
@@ -608,6 +505,7 @@ window.saveJournal = async function () {
     return;
   }
 
+  // Insert header
   const { data: entry, error: entryErr } = await sb
     .from("journal_entries")
     .insert([
@@ -633,13 +531,13 @@ window.saveJournal = async function () {
     return setStatus("Save failed ❌ Policy/table error.");
   }
 
+  // Insert lines linked to header
   const journal_id = entry.id;
   const finalLines = lineRows.map((r) => ({ ...r, journal_id }));
 
   try {
     await sbInsertJournalLines(finalLines);
     lines = await loadLinesFromDb();
-    console.log("Loaded lines:", lines.length);
 
     $("je-lines").innerHTML = "";
     addLine();
@@ -703,20 +601,14 @@ function renderLedger() {
   const tbody = $("ledger-body");
   if (!sel || !tbody) return;
 
-  // rebuild ledger dropdown every time if empty
-  sel.innerHTML = "";
+  // Always rebuild dropdown if empty
+  if (sel.options.length === 0) {
+    sel.innerHTML = "";
 
-const o0 = document.createElement("option");
-o0.value = "";
-o0.textContent = "Select account...";
-sel.appendChild(o0);
-
-COA.forEach((a) => {
-  const opt = document.createElement("option");
-  opt.value = a.id;
-  opt.textContent = `${a.code} - ${a.name}`;
-  sel.appendChild(opt);
-});
+    const o0 = document.createElement("option");
+    o0.value = "";
+    o0.textContent = "Select account...";
+    sel.appendChild(o0);
 
     const sorted = [...COA].sort((a, b) => {
       const ca = codeNum(a.code);
@@ -905,15 +797,18 @@ async function initAppAfterLogin() {
   const d = new Date();
   if ($("je-date")) $("je-date").valueAsDate = d;
 
-  // ✅ IMPORTANT: seed COA from JSON into DB one time (then always DB)
-  COA = await ensureCOASeeded();
+  // Load COA (DB first, fallback JSON for display if DB empty)
+  COA = await loadCOAFromDbOrJson();
   refreshCoaDatalist();
 
+  // Load lines
   lines = await loadLinesFromDb();
 
+  // Reset ledger dropdown (rebuild on open)
   const ledgerSel = $("ledger-account");
   if (ledgerSel) ledgerSel.innerHTML = "";
 
+  // Build Year dropdown from existing lines
   const yearSel = $("filter-year");
   if (yearSel) {
     const yearsFromLines = lines
@@ -941,6 +836,7 @@ async function initAppAfterLogin() {
     if ($("filter-month")) $("filter-month").value = savedMonth;
   }
 
+  // Prepare JE lines
   if ($("je-lines")) {
     $("je-lines").innerHTML = "";
     addLine();
@@ -1021,7 +917,7 @@ function esc(s) {
     .replaceAll("'", "&#039;");
 }
 
-// ✅ Live red-border validation for required fields
+// Live red-border validation for required fields
 ["je-date", "je-refno", "je-description"].forEach((id) => {
   $(id)?.addEventListener("input", () => {
     const el = $(id);
