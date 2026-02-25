@@ -179,7 +179,7 @@ async function loadLinesFromDb() {
 
 // ==============================
 // Supabase helpers (CHART OF ACCOUNTS)
-// NOTE: Requires a table named: chart_of_accounts
+// NOTE: Requires a table named: "coa_accounts"
 // Columns expected: id (uuid), user_id (uuid), code (text), name (text), type (text), normal (text), is_deleted (bool)
 // ==============================
 function normalizeCOA(row) {
@@ -196,7 +196,7 @@ function normalizeCOA(row) {
 async function sbFetchCOA() {
   if (!currentUser) return [];
   const { data, error } = await sb
-    .from("chart_of_accounts")
+    .from("coa_accounts")
     .select("*")
     .eq("user_id", currentUser.id)
     .eq("is_deleted", false)
@@ -208,7 +208,7 @@ async function sbFetchCOA() {
 
 async function sbInsertCOA(row) {
   const { data, error } = await sb
-    .from("chart_of_accounts")
+    .from("coa_accounts")
     .insert([row])
     .select("*")
     .single();
@@ -218,7 +218,7 @@ async function sbInsertCOA(row) {
 
 async function sbUpdateCOA(id, patch) {
   const { error } = await sb
-    .from("chart_of_accounts")
+    .from("coa_accounts")
     .update(patch)
     .eq("id", id)
     .eq("user_id", currentUser.id);
@@ -601,7 +601,8 @@ function renderCOA() {
       <td>${esc(a.normal)}</td>
       <td style="text-align:right;">${money(bal)}</td>
       <td>
-        <button onclick="editAccountPrompt('${esc(a.id)}')">Edit Name</button>
+       <button onclick="addAccountPrompt()">+ Add Account</button>
+       <button onclick="editAccountPrompt('${a.id}')">Edit Name</button>
       </td>
     `;
     tbody.appendChild(tr);
