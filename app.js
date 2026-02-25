@@ -153,13 +153,19 @@ function normalizeLine(row) {
 
 async function sbFetchJournalLines() {
   if (!currentUser) return [];
+
   const { data, error } = await sb
     .from("journal_lines")
     .select("*")
     .eq("user_id", currentUser.id)
+    .eq("is_deleted", false)
     .order("created_at", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Journal fetch error:", error);
+    return [];
+  }
+
   return (data || []).map(normalizeLine);
 }
 
@@ -633,6 +639,7 @@ window.saveJournal = async function () {
   try {
     await sbInsertJournalLines(finalLines);
     lines = await loadLinesFromDb();
+    console.log("Loaded lines:", lines.length);
 
     $("je-lines").innerHTML = "";
     addLine();
@@ -697,11 +704,19 @@ function renderLedger() {
   if (!sel || !tbody) return;
 
   // rebuild ledger dropdown every time if empty
-  if (sel.options.length === 0) {
-    const o0 = document.createElement("option");
-    o0.value = "";
-    o0.textContent = "Select account...";
-    sel.appendChild(o0);
+  sel.innerHTML = "";
+
+const o0 = document.createElement("option");
+o0.value = "";
+o0.textContent = "Select account...";
+sel.appendChild(o0);
+
+COA.forEach((a) => {
+  const opt = document.createElement("option");
+  opt.value = a.id;
+  opt.textContent = `${a.code} - ${a.name}`;
+  sel.appendChild(opt);
+});
 
     const sorted = [...COA].sort((a, b) => {
       const ca = codeNum(a.code);
