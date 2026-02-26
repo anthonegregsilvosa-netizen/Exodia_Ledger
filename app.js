@@ -781,18 +781,30 @@ function renderCOA() {
 
   list.forEach((a) => {
     const bal = balances[a.id] || 0;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${esc(a.code)}</td>
-      <td>${esc(a.name)}</td>
-      <td>${esc(a.type)}</td>
-      <td>${esc(a.normal)}</td>
-      <td style="text-align:right;">${money(bal)}</td>
-      <td>
-       <button onclick="addAccountPrompt()">+ Add Account</button>
-       <button onclick="editAccountPrompt('${a.id}')">Edit Name</button>
-      </td>
-    `;
+   tr.setAttribute("data-coa-row", a.id);
+
+tr.innerHTML = `
+  <td>${esc(a.code)}</td>
+  <td>
+    <span class="coa-name-view">${esc(a.name)}</span>
+    <input class="coa-name-edit" data-coa-edit-name 
+      value="${esc(a.name)}" 
+      style="display:none; width:95%;" />
+  </td>
+  <td>${esc(a.type)}</td>
+  <td>${esc(a.normal)}</td>
+  <td style="text-align:right;">${money(bal)}</td>
+  <td>
+    <span class="coa-actions-view">
+      <button onclick="startEditCOAName('${a.id}')">Edit Name</button>
+      <button onclick="deleteCOAAccount('${a.id}')">Delete</button>
+    </span>
+    <span class="coa-actions-edit" style="display:none;">
+      <button onclick="saveEditCOAName('${a.id}')">Save</button>
+      <button onclick="cancelEditCOAName()">Cancel</button>
+    </span>
+  </td>
+`;
     tbody.appendChild(tr);
   });
 }
@@ -1131,3 +1143,49 @@ function esc(s) {
     markRequired(el, !val);
   });
 });
+
+// ==============================
+// INLINE EDIT COA NAME (no prompt)
+// ==============================
+window.startEditCOAName = function (id) {
+  const row = document.querySelector(`[data-coa-row='${id}']`);
+  if (!row) return;
+
+  row.querySelector(".coa-name-view").style.display = "none";
+  row.querySelector(".coa-name-edit").style.display = "inline-block";
+
+  row.querySelector(".coa-actions-view").style.display = "none";
+  row.querySelector(".coa-actions-edit").style.display = "inline-block";
+};
+
+window.cancelEditCOAName = function () {
+  renderCOA();
+};
+
+window.saveEditCOAName = async function (id) {
+  const row = document.querySelector(`[data-coa-row='${id}']`);
+  if (!row) return;
+
+  const input = row.querySelector("[data-coa-edit-name]");
+  const newName = (input?.value || "").trim();
+  if (!newName) return alert("Name is required.");
+
+  try {
+    await sbUpdateCOA(id, { name: newName, updated_at: new Date().toISOString() });
+
+    COA = await sbFetchCOA();
+    refreshCoaDatalist();
+    resolveLinesAccountIds();
+
+    // reset ledger dropdown
+    const ledgerSel = $("ledger-account");
+    if (ledgerSel) ledgerSel.innerHTML = "";
+
+    renderCOA();
+    renderLedger();
+    renderTrialBalance();
+  } catch (e) {
+    console.error(e);
+    alert("Failed to update account name.");
+  }
+};
