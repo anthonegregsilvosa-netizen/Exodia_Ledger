@@ -780,33 +780,38 @@ function renderCOA() {
     });
 
   list.forEach((a) => {
-    const bal = balances[a.id] || 0;
-   tr.setAttribute("data-coa-row", a.id);
+    list.forEach((a) => {
+  const bal = balances[a.id] || 0;
 
-tr.innerHTML = `
-  <td>${esc(a.code)}</td>
-  <td>
-    <span class="coa-name-view">${esc(a.name)}</span>
-    <input class="coa-name-edit" data-coa-edit-name 
-      value="${esc(a.name)}" 
-      style="display:none; width:95%;" />
-  </td>
-  <td>${esc(a.type)}</td>
-  <td>${esc(a.normal)}</td>
-  <td style="text-align:right;">${money(bal)}</td>
-  <td>
-    <span class="coa-actions-view">
-      <button onclick="startEditCOAName('${a.id}')">Edit Name</button>
-      <button onclick="deleteCOAAccount('${a.id}')">Delete</button>
-    </span>
-    <span class="coa-actions-edit" style="display:none;">
-      <button onclick="saveEditCOAName('${a.id}')">Save</button>
-      <button onclick="cancelEditCOAName()">Cancel</button>
-    </span>
-  </td>
-`;
-    tbody.appendChild(tr);
-  });
+  const tr = document.createElement("tr");   // ✅ IMPORTANT (this fixes tr not defined)
+  tr.setAttribute("data-coa-row", a.id);
+
+  tr.innerHTML = `
+    <td>${esc(a.code)}</td>
+    <td>
+      <span class="coa-name-view">${esc(a.name)}</span>
+      <input class="coa-name-edit" data-coa-edit-name
+        value="${esc(a.name)}"
+        style="display:none; width:95%;" />
+    </td>
+    <td>${esc(a.type)}</td>
+    <td>${esc(a.normal)}</td>
+    <td style="text-align:right;">${money(bal)}</td>
+    <td>
+      <span class="coa-actions-view">
+        <button onclick="startEditCOAName('${a.id}')">Edit Name</button>
+        <button onclick="deleteCOAAccount('${a.id}')">Delete</button>
+      </span>
+      <span class="coa-actions-edit" style="display:none;">
+        <button onclick="saveEditCOAName('${a.id}')">Save</button>
+        <button onclick="cancelEditCOAName()">Cancel</button>
+      </span>
+    </td>
+  `;
+      
+  tbody.appendChild(tr);
+});
+    
 }
 
 // ==============================
