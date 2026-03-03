@@ -7,6 +7,7 @@ const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
 const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
+const JOURNAL_VIEW_KEY = "exodiaLedger.journalView.v1";
 
 // ==============================
 // Supabase Setup
@@ -141,12 +142,20 @@ window.signOut = async function signOut() {
 // Supabase helpers (JOURNAL LINES)
 // ==============================
 function normalizeLine(row) {
+  const h = row.journal_entries || {};
   return {
     id: row.id,
     journal_id: row.journal_id || null,
     is_deleted: row.is_deleted ?? false,
     entry_date: row.entry_date,
     ref: row.ref,
+
+    description: h.description || "",
+    department: h.department || "",
+    payment_method: h.payment_method || "",
+    client_vendor: h.client_vendor || "",
+    remarks: h.remarks || "",
+
     accountId: row.account_id,
     accountName: row.account_name || "",
     debit: Number(row.debit || 0),
@@ -155,11 +164,53 @@ function normalizeLine(row) {
   };
 }
 
+function normalizeEntry(row) {
+  return {
+    id: row.id,
+    entry_date: row.entry_date,
+    ref: row.ref,
+    description: row.description || "",
+    department: row.department || "",
+    payment_method: row.payment_method || "",
+    client_vendor: row.client_vendor || "",
+    remarks: row.remarks || "",
+    created_at: row.created_at,
+  };
+}
+
+async function sbFetchJournalEntries() {
+  if (!currentUser) return [];
+
+  const { data, error } = await sb
+    .from("journal_entries")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("is_deleted", false)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Entries fetch error:", error);
+    return [];
+  }
+
+  return (data || []).map(normalizeEntry);
+}
+
 async function sbFetchJournalLines() {
   if (!currentUser) return [];
+
   const { data, error } = await sb
     .from("journal_lines")
-    .select("*")
+    .select(`
+      *,
+      journal_entries:journal_id (
+        description,
+        department,
+        payment_method,
+        client_vendor,
+        remarks
+      )
+    `)
     .eq("user_id", currentUser.id)
     .eq("is_deleted", false)
     .order("created_at", { ascending: true });
@@ -213,9 +264,17 @@ function resolveAccountId(rawAccountId, accountName) {
   const raw = String(rawAccountId || "").trim();
   if (!raw) return "";
 
+  // already an actual COA id
   if (COA_BY_ID[raw]) return raw;
+
+  // if raw is a code (e.g. "1001")
   if (COA_BY_CODE[raw]?.id) return String(COA_BY_CODE[raw].id);
 
+  // if raw looks like "1001 - Cash on Hand"
+  const rawCode = parseCodeFromAccountName(raw);
+  if (rawCode && COA_BY_CODE[rawCode]?.id) return String(COA_BY_CODE[rawCode].id);
+
+  // fallback: try account_name column
   const code = parseCodeFromAccountName(accountName);
   if (code && COA_BY_CODE[code]?.id) return String(COA_BY_CODE[code].id);
 
@@ -430,20 +489,57 @@ window.applyDateFilter = function () {
 };
 
 // ==============================
+// Journal sub-tabs (Entry / History)
+// ==============================
+window.showJournal = function (which) {
+  localStorage.setItem(JOURNAL_VIEW_KEY, which);
+
+  const entry = $("journal");
+  const hist = $("journal-history");
+
+  if (entry) entry.style.display = (which === "entry") ? "block" : "none";
+  if (hist) hist.style.display = (which === "history") ? "block" : "none";
+
+  if (which === "history") renderHistory();
+};
+
+// ==============================
 // Tabs
 // ==============================
 window.show = function (view) {
+  // treat "journal-history" as a sub-view inside journal
+  if (view === "journal-history") view = "journal";
+
   localStorage.setItem(LAST_VIEW_KEY, view);
 
+  // Main sections only
   ["coa", "journal", "ledger", "trial"].forEach((v) => {
     const el = $(v);
     if (!el) return;
     el.style.display = v === view ? "block" : "none";
   });
 
+  // Always hide journal-history unless journal sub-tab says "history"
+  const hist = $("journal-history");
+  if (hist) hist.style.display = "none";
+
+  // Toolbars
+  const coaTb = $("coa-toolbar");
+  if (coaTb) coaTb.style.display = (view === "coa") ? "block" : "none";
+
+  const journalTb = $("journal-toolbar");
+  if (journalTb) journalTb.style.display = (view === "journal") ? "block" : "none";
+
+  // Render main views + journal sub-view
   if (view === "coa") renderCOA();
   if (view === "ledger") renderLedger();
   if (view === "trial") renderTrialBalance();
+
+  if (view === "journal") {
+    // default: restore last journal sub-tab or show entry
+    const saved = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
+    showJournal(saved);
+  }
 };
 
 // ==============================
@@ -452,53 +548,6 @@ window.show = function (view) {
 window.filterCOA = function (type) {
   currentCOAType = type;
   renderCOA();
-};
-
-// ==============================
-// COA ADD / EDIT (Prompt based)
-// ==============================
-window.addAccountPrompt = async function addAccountPrompt() {
-  if (!currentUser) return alert("Please login first.");
-
-  const code = (prompt("Account Code (e.g., 1001):") || "").trim();
-  if (!code) return;
-
-  const name = (prompt("Account Name:") || "").trim();
-  if (!name) return;
-
-  const type = (prompt("Account Type (Asset/Liability/Equity/Revenue/Expense):") || "").trim();
-  if (!type) return;
-
-  const normal = (prompt("Normal (Debit/Credit):") || "").trim();
-  if (!normal) return;
-
-  try {
-    await sbInsertCOA({
-      user_id: currentUser.id,
-      code,
-      name,
-      type,
-      normal,
-      is_deleted: false,
-    });
-
-    COA = await sbFetchCOA();
-    refreshCoaDatalist();
-    resolveLinesAccountIds();
-
-    // reset ledger dropdown
-    const ledgerSel = $("ledger-account");
-    if (ledgerSel) ledgerSel.innerHTML = "";
-
-    renderCOA();
-    renderLedger();
-    renderTrialBalance();
-
-    alert("✅ Account added!");
-  } catch (e) {
-    console.error(e);
-    alert("❌ Failed to add account. Check unique code / policies.");
-  }
 };
 
 window.editAccountPrompt = async function editAccountPrompt(accountId) {
@@ -677,17 +726,17 @@ window.saveJournal = async function () {
     totalDebit += d;
     totalCredit += c;
 
-    lineRows.push({
-      user_id: currentUser.id,
-      journal_id: null,
-      entry_date,
-      ref,
-      account_id: accountId,
-      account_name: accountName,
-      debit: d,
-      credit: c,
-    });
-  });
+   lineRows.push({
+  user_id: currentUser.id,
+  journal_id: null,
+  entry_date,
+  ref,
+  account_id: accountId,
+  account_name: accountName,
+  debit: d,
+  credit: c,
+});
+});
 
   if (lineRows.length < 2) return setStatus("Add at least 2 lines.");
   if (Math.abs(totalDebit - totalCredit) > 0.00001) {
@@ -769,43 +818,32 @@ function renderCOA() {
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
 
-  list.forEach((a) => {
-    const bal = balances[a.id] || 0;
+ list.forEach((a) => {
+  const bal = balances[a.id] || 0;
 
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-coa-row", a.id);
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${esc(a.code)}</td>
+    <td>${esc(a.name)}</td>
+    <td>${esc(a.type)}</td>
+    <td>${esc(a.normal)}</td>
+    <td style="text-align:right;">${money(bal)}</td>
+    <td style="position:relative; text-align:right;">
+      <button class="coa-action-btn" onclick="toggleCoaMenu('${a.id}', event)">⋯</button>
+      <div class="coa-menu" data-coa-menu="${a.id}">
+        <button onclick="editAccountPrompt('${a.id}')">✏️ Edit name</button>
+        <button class="danger" onclick="deleteCOAAccount('${a.id}')">🗑 Delete</button>
+      </div>
+    </td>
+  `;
+  tbody.appendChild(tr);
+});
 
-    tr.innerHTML = `
-      <td>${esc(a.code)}</td>
-      <td>
-        <span class="coa-name-view">${esc(a.name)}</span>
-        <input class="coa-name-edit" data-coa-edit-name
-          value="${esc(a.name)}"
-          style="display:none; width:95%;" />
-      </td>
-      <td>${esc(a.type)}</td>
-      <td>${esc(a.normal)}</td>
-      <td style="text-align:right;">${money(bal)}</td>
-      <td>
-        <span class="coa-actions-view">
-          <button onclick="startEditCOAName('${a.id}')">Edit Name</button>
-          <button onclick="deleteCOAAccount('${a.id}')">Delete</button>
-        </span>
-        <span class="coa-actions-edit" style="display:none;">
-          <button onclick="saveEditCOAName('${a.id}')">Save</button>
-          <button onclick="cancelEditCOAName()">Cancel</button>
-        </span>
-      </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-
-  if (list.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6">No accounts found for this filter.</td>`;
-    tbody.appendChild(tr);
-  }
+if (list.length === 0) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td colspan="6">No accounts found for this filter.</td>`;
+  tbody.appendChild(tr);
+}
 }
 
 // ==============================
@@ -884,31 +922,40 @@ function renderLedger() {
     const tr = document.createElement("tr");
     const canEdit = !!l.journal_id;
 
-    tr.innerHTML = `
-      <td>${esc(l.entry_date)}</td>
-      <td>${esc(l.ref)}</td>
-      <td style="text-align:right;">${money(l.debit)}</td>
-      <td style="text-align:right;">${money(l.credit)}</td>
-      <td style="text-align:right;">${money(running)}</td>
-      <td>
-        ${
-          canEdit
-            ? `<a href="./edit.html?journal_id=${encodeURIComponent(
-                l.journal_id
-              )}&account_id=${encodeURIComponent(accountId)}">Edit / Delete</a>`
-            : `<span class="muted">N/A</span>`
-        }
-      </td>
-    `;
+   tr.innerHTML = `
+  <td>${esc(l.entry_date)}</td>
+  <td>${esc(l.ref)}</td>
+  <td>${esc(l.description || "")}</td>
+  <td>${esc(l.department || "")}</td>
+  <td>${esc(l.payment_method || "")}</td>
+  <td>${esc(l.client_vendor || "")}</td>
+  <td>${esc(l.remarks || "")}</td>
+  <td style="text-align:right;">${money(l.debit)}</td>
+  <td style="text-align:right;">${money(l.credit)}</td>
+  <td style="text-align:right;">${money(running)}</td>
+  <td>
+    ${
+      canEdit
+        ? `<a href="./edit.html?journal_id=${encodeURIComponent(
+            l.journal_id
+          )}&account_id=${encodeURIComponent(accountId)}">Edit / Delete</a>`
+        : `<span class="muted">N/A</span>`
+    }
+  </td>
+`;
 
     tbody.appendChild(tr);
   });
 
   if (acctLines.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6">No transactions for this account (with current filter).</td>`;
-    tbody.appendChild(tr);
-  }
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td colspan="11" style="text-align:center; padding:20px;">
+      No transactions for this account (with current filter).
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
 }
 
 // ==============================
@@ -1063,7 +1110,75 @@ async function initAppAfterLogin() {
   applyDateFilter();
 
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
+
+// If coming back from edit page, open ledger and auto-select account
+if (window.location.hash === "#ledger") {
+  show("ledger");
+
+  const acctFromUrl = getQueryParam("account_id");
+  if (acctFromUrl && $("ledger-account")) {
+    $("ledger-account").value = acctFromUrl;
+    renderLedger();
+  }
+} else {
   show(lastView);
+}
+} // ✅ THIS closes initAppAfterLogin()
+
+// ==============================
+// Render Journal History ✅
+// ==============================
+function renderHistory() {
+  const tbody = $("history-body");
+  const status = $("history-status");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+  if (status) status.textContent = "Loading...";
+
+  if (!currentUser) {
+    if (status) status.textContent = "Please login first.";
+    return;
+  }
+
+  sbFetchJournalEntries()
+    .then((entries) => {
+      tbody.innerHTML = "";
+
+      if (!entries || entries.length === 0) {
+        if (status) status.textContent = "No journal entries found.";
+        return;
+      }
+
+      if (status) status.textContent = "";
+
+      entries.forEach((e) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${esc(e.entry_date || "")}</td>
+          <td>${esc(formatDateTime(e.created_at))}</td>
+          <td>${esc(e.ref || "")}</td>
+          <td>${esc(e.description || "")}</td>
+          <td>${esc(e.department || "")}</td>
+          <td>${esc(e.payment_method || "")}</td>
+          <td>${esc(e.client_vendor || "")}</td>
+          <td>${esc(e.remarks || "")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch((err) => {
+      console.error("renderHistory error:", err);
+      if (status) status.textContent = "Failed to load history.";
+    });
+}
+
+// helper: format created_at into readable time
+function formatDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
 }
 
 // ==============================
@@ -1091,6 +1206,12 @@ async function initAppAfterLogin() {
 // ==============================
 // Helpers / Utils
 // ==============================
+
+function getQueryParam(name) {
+  const u = new URL(window.location.href);
+  return u.searchParams.get(name) || "";
+}
+  
 function tdWrap(el, right = false) {
   const td = document.createElement("td");
   if (right) td.style.textAlign = "right";
@@ -1188,6 +1309,26 @@ window.saveEditCOAName = async function (id) {
   }
 };
 
+function closeAllCoaMenus() {
+  document.querySelectorAll(".coa-menu").forEach((m) => (m.style.display = "none"));
+}
+
+window.toggleCoaMenu = function (id, ev) {
+  ev?.stopPropagation?.();
+  const menu = document.querySelector(`[data-coa-menu='${id}']`);
+  if (!menu) return;
+  const isOpen = menu.style.display === "block";
+  closeAllCoaMenus();
+  menu.style.display = isOpen ? "none" : "block";
+};
+
+// close menu when clicking anywhere else
+document.addEventListener("click", (e) => {
+  const isActionBtn = e.target?.closest?.(".coa-action-btn");
+  const isMenu = e.target?.closest?.(".coa-menu");
+  if (!isActionBtn && !isMenu) closeAllCoaMenus();
+});
+
 // ==============================
 // DELETE COA ACCOUNT (soft delete)
 // ==============================
@@ -1218,3 +1359,130 @@ window.deleteCOAAccount = async function (id) {
     alert("Failed to delete account. Check RLS policies.");
   }
 };
+
+// ==============================
+// COA TOOLBAR (TOP OPTIONS BAR)
+// ==============================
+window.focusAddAccount = function () {
+  show("coa");
+  $("coa-code")?.focus();
+};
+
+window.editSelectedCOA = function () {
+  if (!selectedCOAId) return alert("Select an account first.");
+  editAccountPrompt(selectedCOAId);
+};
+
+window.deleteSelectedCOA = function () {
+  if (!selectedCOAId) return alert("Select an account first.");
+  deleteCOAAccount(selectedCOAId);
+};
+
+// ==============================
+// ADD ACCOUNT POPUP (LIKE EDIT)
+// ==============================
+window.addAccountPopup = async function () {
+  if (!currentUser) return alert("Please login first.");
+
+  const code = (prompt("Account Code (e.g. 1001):") || "").trim();
+  if (!code) return;
+
+  const name = (prompt(`Account Name for ${code}:`) || "").trim();
+  if (!name) return;
+
+  const type = (prompt("Account Type (Asset/Liability/Equity/Revenue/Expense):", "Asset") || "").trim();
+  if (!type) return;
+
+  const normal = (prompt("Normal Balance (Debit/Credit):", "Debit") || "").trim();
+  if (!normal) return;
+
+  try {
+    await sbInsertCOA({
+      user_id: currentUser.id,
+      code,
+      name,
+      type,
+      normal,
+      is_deleted: false,
+    });
+
+    COA = await sbFetchCOA();
+    refreshCoaDatalist();
+    resolveLinesAccountIds();
+
+    const ledgerSel = $("ledger-account");
+    if (ledgerSel) ledgerSel.innerHTML = "";
+
+    renderCOA();
+    renderLedger();
+    renderTrialBalance();
+
+    alert("✅ Account added successfully!");
+  } catch (e) {
+    console.error(e);
+    alert("❌ Failed to add account (maybe duplicate code).");
+  }
+};
+
+window.openAddCoaModal = function () {
+  $("addcoa-modal").style.display = "grid";
+  $("addcoa-code").value = getNextAccountCode();   // ✅ auto next
+  $("addcoa-name").value = "";
+  $("addcoa-type").value = "Asset";
+  $("addcoa-normal").value = "Debit";
+  $("addcoa-msg").textContent = "";
+  $("addcoa-name").focus();
+};
+
+window.closeAddCoaModal = function () {
+  $("addcoa-modal").style.display = "none";
+};
+
+window.saveAddCoaModal = async function () {
+  const code = $("addcoa-code").value.trim();
+  const name = $("addcoa-name").value.trim();
+  const type = $("addcoa-type").value;
+  const normal = $("addcoa-normal").value;
+const exists = COA.some(a => String(a.code).trim() === code);
+if (exists) {
+  $("addcoa-msg").textContent = `Code ${code} already exists. Try ${getNextAccountCode()} instead.`;
+  return;
+}
+
+  if (!code || !name) {
+    $("addcoa-msg").textContent = "Code and Name are required.";
+    return;
+  }
+
+  try {
+    await sbInsertCOA({
+      user_id: currentUser.id,
+      code,
+      name,
+      type,
+      normal,
+      is_deleted: false,
+    });
+
+    COA = await sbFetchCOA();
+    renderCOA();
+    closeAddCoaModal();
+  } catch (e) {
+  console.error(e);
+  // supabase error code 23505 = duplicate
+  if (e?.code === "23505") {
+    $("addcoa-msg").textContent = `Code ${code} already exists. Please use another code.`;
+    return;
+  }
+  $("addcoa-msg").textContent = "Failed to add account. Check your connection/policies.";
+}
+};
+
+function getNextAccountCode() {
+  const codes = (COA || [])
+    .map(a => Number(String(a.code || "").replace(/[^0-9]/g, "")))
+    .filter(n => Number.isFinite(n));
+
+  if (codes.length === 0) return "1001";
+  return String(Math.max(...codes) + 1);
+}
