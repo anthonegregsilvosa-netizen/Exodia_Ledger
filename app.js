@@ -8,6 +8,8 @@ const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
 const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 const JOURNAL_VIEW_KEY = "exodiaLedger.journalView.v1";
+const FILTER_FROM_KEY = "exodiaLedger.filterFrom.v1";
+const FILTER_TO_KEY = "exodiaLedger.filterTo.v1";
 
 // ==============================
 // Supabase Setup
@@ -36,8 +38,8 @@ let COA = [];
 let currentCOAType = "All";
 let lines = []; // loaded from Supabase (journal_lines)
 
-let filterYear = "";
-let filterMonth = "";
+let filterFrom = ""; // YYYY-MM-DD
+let filterTo = "";   // YYYY-MM-DD
 
 // ==============================
 // AUTH UI helpers
@@ -223,6 +225,25 @@ async function sbFetchJournalLines() {
   return (data || []).map(normalizeLine);
 }
 
+async function sbFetchJournalLinesForEntry(journal_id) {
+  if (!currentUser) return [];
+
+  const { data, error } = await sb
+    .from("journal_lines")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("journal_id", journal_id)
+    .eq("is_deleted", false)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Lines fetch error:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 async function sbInsertJournalLines(rows) {
   const { error } = await sb.from("journal_lines").insert(rows);
   if (error) throw error;
@@ -287,6 +308,50 @@ function resolveLinesAccountIds() {
     ...l,
     resolvedAccountId: resolveAccountId(l.accountId, l.accountName),
   }));
+}
+
+function makeAccountSelect() {
+  const sel = document.createElement("select");
+
+  const sorted = [...COA].sort((a, b) => codeNum(a.code) - codeNum(b.code));
+  sorted.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = String(a.id); // IMPORTANT: UUID
+    opt.textContent = `${a.code} - ${a.name}`;
+    sel.appendChild(opt);
+  });
+
+  return sel;
+}
+
+function renderEditLines(linesForEdit) {
+  const tbody = document.getElementById("edit-lines-body"); // <-- change to your edit page tbody id
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  linesForEdit.forEach((line) => {
+    const tr = document.createElement("tr");
+
+    const sel = makeAccountSelect();
+    const resolvedId = resolveAccountId(line.account_id, line.account_name);
+
+    // fallback option if account doesn't exist anymore
+    if (![...sel.options].some((o) => o.value === resolvedId)) {
+      const fallback = document.createElement("option");
+      fallback.value = resolvedId || "";
+      fallback.textContent = line.account_name || "(Unknown account)";
+      sel.prepend(fallback);
+    }
+
+    sel.value = resolvedId;
+
+    const tdAcct = document.createElement("td");
+    tdAcct.appendChild(sel);
+    tr.appendChild(tdAcct);
+
+    tbody.appendChild(tr);
+  });
 }
 
 // ==============================
@@ -435,6 +500,50 @@ function markRequired(el, isBad) {
   el.style.border = isBad ? "2px solid crimson" : "";
 }
 
+window.filterLedgerAccounts = function filterLedgerAccounts() {
+  const sel = $("ledger-account");
+  if (!sel) return;
+
+  const q = ($("ledger-search")?.value || "").trim().toLowerCase();
+
+  // rebuild dropdown every time based on search
+  sel.innerHTML = "";
+
+  const o0 = document.createElement("option");
+  o0.value = "";
+  o0.textContent = q ? "Select from results..." : "Select account...";
+  sel.appendChild(o0);
+
+  const sorted = [...COA].sort((a, b) => {
+    const ca = codeNum(a.code);
+    const cb = codeNum(b.code);
+    if (ca !== cb) return ca - cb;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  const filtered = q
+    ? sorted.filter((a) => {
+        const text = `${a.code} ${a.name} ${a.type}`.toLowerCase();
+        return text.includes(q);
+      })
+    : sorted;
+
+  filtered.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = a.id;
+    opt.textContent = `${a.code} - ${a.name}`;
+    sel.appendChild(opt);
+  });
+
+  // keep previous selection if still visible
+  const saved = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
+  if (saved && [...sel.options].some((o) => o.value === saved)) {
+    sel.value = saved;
+  }
+
+  renderLedger();
+};
+
 // ==============================
 // COA datalist (for searchable picker)
 // ==============================
@@ -473,19 +582,46 @@ function textToAccountId(text) {
 // ==============================
 // Filters (Year/Month)
 // ==============================
-window.applyDateFilter = function () {
-  const y = $("filter-year")?.value ?? "";
-  const m = $("filter-month")?.value ?? "";
+window.applyDateRangeFilter = function () {
+  const from = $("filter-from")?.value || "";
+  const to = $("filter-to")?.value || "";
 
-  filterYear = !y || y === "All" ? "" : y;
-  filterMonth = !m || m === "All" ? "" : m;
+  filterFrom = from;
+  filterTo = to;
 
-  localStorage.setItem(FILTER_YEAR_KEY, y);
-  localStorage.setItem(FILTER_MONTH_KEY, m);
+  localStorage.setItem(FILTER_FROM_KEY, from);
+  localStorage.setItem(FILTER_TO_KEY, to);
 
-  renderCOA();
+    renderCOA();
   renderLedger();
-  renderTrialBalance();
+
+  const wsTrial = $("ws-trial");
+  const wsPL = $("ws-pl");
+  const wsSFP = $("ws-sfp");
+
+  if (wsPL && wsPL.style.display === "block") renderProfitAndLoss();
+  else if (wsSFP && wsSFP.style.display === "block") renderStatementOfFinancialPosition();
+  else renderTrialBalance();
+};
+
+window.clearDateRange = function () {
+  filterFrom = "";
+  filterTo = "";
+  if ($("filter-from")) $("filter-from").value = "";
+  if ($("filter-to")) $("filter-to").value = "";
+  localStorage.removeItem(FILTER_FROM_KEY);
+  localStorage.removeItem(FILTER_TO_KEY);
+
+    renderCOA();
+  renderLedger();
+
+  const wsTrial = $("ws-trial");
+  const wsPL = $("ws-pl");
+  const wsSFP = $("ws-sfp");
+
+  if (wsPL && wsPL.style.display === "block") renderProfitAndLoss();
+  else if (wsSFP && wsSFP.style.display === "block") renderStatementOfFinancialPosition();
+  else renderTrialBalance();
 };
 
 // ==============================
@@ -496,11 +632,37 @@ window.showJournal = function (which) {
 
   const entry = $("journal");
   const hist = $("journal-history");
+  const dateBar = $("date-range-bar");
 
   if (entry) entry.style.display = (which === "entry") ? "block" : "none";
   if (hist) hist.style.display = (which === "history") ? "block" : "none";
 
+  // hide date range on Journal Entry, show on Journal History
+  if (dateBar) dateBar.style.display = (which === "history") ? "flex" : "none";
+
+  if (which === "entry") {
+    const tbody = $("je-lines");
+    if (tbody && tbody.children.length === 0) {
+      addLine();
+      addLine();
+    }
+  }
+
   if (which === "history") renderHistory();
+};
+
+window.showWorksheet = function (view) {
+  const trial = $("ws-trial");
+  const pl = $("ws-pl");
+  const sfp = $("ws-sfp");
+
+  if (trial) trial.style.display = (view === "trial") ? "block" : "none";
+  if (pl) pl.style.display = (view === "pl") ? "block" : "none";
+  if (sfp) sfp.style.display = (view === "sfp") ? "block" : "none";
+
+  if (view === "trial") showWorksheet("trial");
+  if (view === "pl") renderProfitAndLoss();
+  if (view === "sfp") renderStatementOfFinancialPosition();
 };
 
 // ==============================
@@ -530,10 +692,20 @@ window.show = function (view) {
   const journalTb = $("journal-toolbar");
   if (journalTb) journalTb.style.display = (view === "journal") ? "block" : "none";
 
+    // Show date range on reports/history, hide on Journal Entry
+  const dateBar = $("date-range-bar");
+  const journalMode = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
+
+  if (view === "journal" && journalMode === "entry") {
+    if (dateBar) dateBar.style.display = "none";
+  } else {
+    if (dateBar) dateBar.style.display = "flex";
+  }
+
   // Render main views + journal sub-view
   if (view === "coa") renderCOA();
   if (view === "ledger") renderLedger();
-  if (view === "trial") renderTrialBalance();
+  if (view === "trial") showWorksheet("trial");
 
   if (view === "journal") {
     // default: restore last journal sub-tab or show entry
@@ -646,7 +818,7 @@ window.addLine = function () {
 
   const acctInput = document.createElement("input");
   acctInput.placeholder = "Type to search account (code or name)...";
-  acctInput.style.width = "420px";
+  acctInput.style.width = "100%";
   acctInput.setAttribute("list", "coa-datalist");
 
   const acctId = document.createElement("input");
@@ -661,15 +833,18 @@ window.addLine = function () {
 
   const debit = document.createElement("input");
   debit.placeholder = "0.00";
-  debit.style.width = "140px";
+  debit.style.width = "100%";
 
   const credit = document.createElement("input");
   credit.placeholder = "0.00";
-  credit.style.width = "140px";
+  credit.style.width = "100%";
 
   const delBtn = document.createElement("button");
-  delBtn.textContent = "X";
-  delBtn.onclick = () => tr.remove();
+delBtn.textContent = "Remove";
+delBtn.className = "btn-soft";
+delBtn.style.fontSize = "14px";
+delBtn.style.padding = "8px 12px";
+delBtn.onclick = () => tr.remove();
 
   tr.appendChild(tdWrap(wrap));
   tr.appendChild(tdWrap(debit, true));
@@ -802,6 +977,27 @@ function renderCOA() {
   tbody.innerHTML = "";
   const balances = computeBalances();
 
+    const totalsByType = {
+    Asset: 0,
+    Liability: 0,
+    Equity: 0,
+    Revenue: 0,
+    Expense: 0,
+  };
+
+  COA.forEach((a) => {
+    const bal = balances[a.id] || 0;
+    if (totalsByType[a.type] !== undefined) {
+      totalsByType[a.type] += bal;
+    }
+  });
+
+  if ($("sum-asset")) $("sum-asset").textContent = money(totalsByType.Asset || 0);
+  if ($("sum-liability")) $("sum-liability").textContent = money(totalsByType.Liability || 0);
+  if ($("sum-equity")) $("sum-equity").textContent = money(totalsByType.Equity || 0);
+  if ($("sum-revenue")) $("sum-revenue").textContent = money(totalsByType.Revenue || 0);
+  if ($("sum-expense")) $("sum-expense").textContent = money(totalsByType.Expense || 0);
+
   const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
 
   const list = COA
@@ -898,11 +1094,11 @@ function renderLedger() {
     .filter((l) => !l.is_deleted)
     .filter((l) => (l.resolvedAccountId || l.accountId) === accountId)
     .filter((l) => {
-      const d = String(l.entry_date || "");
-      if (filterYear && !d.startsWith(filterYear)) return false;
-      if (filterMonth && Number(d.slice(5, 7)) !== Number(filterMonth)) return false;
-      return true;
-    })
+  const d = String(l.entry_date || "");
+  if (filterFrom && d < filterFrom) return false;
+  if (filterTo && d > filterTo) return false;
+  return true;
+})
     .sort(
       (a, b) =>
         String(a.entry_date || "").localeCompare(String(b.entry_date || "")) ||
@@ -968,11 +1164,11 @@ function computeBalances() {
   lines
     .filter((l) => !l.is_deleted)
     .filter((l) => {
-      const d = String(l.entry_date || "");
-      if (filterYear && !d.startsWith(filterYear)) return false;
-      if (filterMonth && Number(d.slice(5, 7)) !== Number(filterMonth)) return false;
-      return true;
-    })
+  const d = String(l.entry_date || "");
+  if (filterFrom && d < filterFrom) return false;
+  if (filterTo && d > filterTo) return false;
+  return true;
+})
     .forEach((l) => {
       const key = l.resolvedAccountId || l.accountId;
       const normal = normals[key] || "Debit";
@@ -1058,6 +1254,193 @@ function renderTrialBalance() {
   }
 }
 
+function renderProfitAndLoss() {
+  const tbody = $("pl-body");
+  const netEl = $("pl-net");
+  if (!tbody || !netEl) return;
+
+  tbody.innerHTML = "";
+
+  const balances = computeBalances();
+
+  let totalRevenue = 0;
+  let totalExpense = 0;
+
+  COA.forEach((a) => {
+    const bal = balances[a.id] || 0;
+    const type = String(a.type || "").trim();
+
+    if (type === "Revenue") totalRevenue += bal;
+    if (type === "Expense" || type === "Expenses") totalExpense += bal;
+  });
+
+  const net = totalRevenue - totalExpense;
+
+  tbody.innerHTML = `
+    <tr>
+      <td><b>Total Revenue</b></td>
+      <td style="text-align:right;">${money(totalRevenue)}</td>
+    </tr>
+    <tr>
+      <td><b>Total Expenses</b></td>
+      <td style="text-align:right;">${money(totalExpense)}</td>
+    </tr>
+  `;
+
+  netEl.textContent = money(net);
+}
+
+function renderStatementOfFinancialPosition() {
+  const tbody = $("sfp-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  const balances = computeBalances();
+
+  let totalAssets = 0;
+  let totalLiabilities = 0;
+  let totalEquity = 0;
+
+  COA.forEach((a) => {
+    const bal = balances[a.id] || 0;
+    const type = String(a.type || "").trim();
+
+    if (type === "Asset" || type === "Assets") totalAssets += bal;
+    if (type === "Liability" || type === "Liabilities") totalLiabilities += bal;
+    if (type === "Equity") totalEquity += bal;
+  });
+
+  tbody.innerHTML = `
+    <tr>
+      <td><b>Total Assets</b></td>
+      <td style="text-align:right;">${money(totalAssets)}</td>
+    </tr>
+    <tr>
+      <td><b>Total Liabilities</b></td>
+      <td style="text-align:right;">${money(totalLiabilities)}</td>
+    </tr>
+    <tr>
+      <td><b>Total Equity</b></td>
+      <td style="text-align:right;">${money(totalEquity)}</td>
+    </tr>
+    <tr>
+      <td><b>Total Liabilities and Equity</b></td>
+      <td style="text-align:right;">${money(totalLiabilities + totalEquity)}</td>
+    </tr>
+  `;
+}
+
+window.downloadTrialBalancePDF = function downloadTrialBalancePDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF library not loaded.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const title = "Trial Balance";
+  const from = filterFrom || "";
+  const to = filterTo || "";
+
+  let subtitle = "All transactions";
+  if (from && to) subtitle = `Date Range: ${from} to ${to}`;
+  else if (from) subtitle = `From: ${from}`;
+  else if (to) subtitle = `To: ${to}`;
+
+  doc.setFontSize(16);
+  doc.text(title, 14, 18);
+
+  doc.setFontSize(10);
+  doc.text(subtitle, 14, 25);
+
+  const balances = computeBalances();
+
+  const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
+
+  const list = [...COA].sort((a, b) => {
+    const ta = typeOrder[a.type] ?? 99;
+    const tb = typeOrder[b.type] ?? 99;
+    if (ta !== tb) return ta - tb;
+
+    const ca = codeNum(a.code);
+    const cb = codeNum(b.code);
+    if (ca !== cb) return ca - cb;
+
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
+
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  const rows = list.map((a) => {
+    const bal = balances[a.id] || 0;
+
+    let debit = 0;
+    let credit = 0;
+
+    if (a.normal === "Debit") {
+      debit = Math.max(bal, 0);
+      credit = Math.max(-bal, 0);
+    } else {
+      credit = Math.max(bal, 0);
+      debit = Math.max(-bal, 0);
+    }
+
+    totalDebit += debit;
+    totalCredit += credit;
+
+    return [
+      a.code || "",
+      a.name || "",
+      a.type || "",
+      money(debit),
+      money(credit),
+    ];
+  });
+
+  doc.autoTable({
+    startY: 30,
+    head: [["Code", "Account Name", "Type", "Debit", "Credit"]],
+    body: rows,
+    foot: [[
+      "",
+      "",
+      "Total",
+      money(totalDebit),
+      money(totalCredit)
+    ]],
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+    headStyles: {
+      fillColor: [51, 51, 51],
+    },
+    footStyles: {
+      fillColor: [240, 240, 240],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+    },
+    columnStyles: {
+      3: { halign: "right" },
+      4: { halign: "right" },
+    },
+  });
+
+  const diff = Math.abs(totalDebit - totalCredit);
+  const status = diff < 0.00001
+    ? "Balanced"
+    : `Not balanced (Difference: ${money(diff)})`;
+
+  const finalY = doc.lastAutoTable.finalY || 30;
+  doc.setFontSize(10);
+  doc.text(`Status: ${status}`, 14, finalY + 10);
+
+  doc.save("trial-balance.pdf");
+};
+
 // ==============================
 // Init after login
 // ==============================
@@ -1074,40 +1457,17 @@ async function initAppAfterLogin() {
   const ledgerSel = $("ledger-account");
   if (ledgerSel) ledgerSel.innerHTML = "";
 
-  const yearSel = $("filter-year");
-  if (yearSel) {
-    const yearsFromLines = lines
-      .map((l) => String(l.entry_date || "").slice(0, 4))
-      .filter((y) => y && /^\d{4}$/.test(y));
+  // restore saved date range
+const savedFrom = localStorage.getItem(FILTER_FROM_KEY) || "";
+const savedTo = localStorage.getItem(FILTER_TO_KEY) || "";
 
-    const years = Array.from(new Set(yearsFromLines)).sort();
+filterFrom = savedFrom;
+filterTo = savedTo;
 
-    yearSel.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "All";
-    optAll.textContent = "All";
-    yearSel.appendChild(optAll);
+if ($("filter-from")) $("filter-from").value = savedFrom;
+if ($("filter-to")) $("filter-to").value = savedTo;
 
-    years.forEach((y) => {
-      const opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    });
-
-    const savedYear = localStorage.getItem(FILTER_YEAR_KEY) || "All";
-    const savedMonth = localStorage.getItem(FILTER_MONTH_KEY) || "";
-    if ($("filter-year")) $("filter-year").value = savedYear;
-    if ($("filter-month")) $("filter-month").value = savedMonth;
-  }
-
-  if ($("je-lines")) {
-    $("je-lines").innerHTML = "";
-    addLine();
-    addLine();
-  }
-
-  applyDateFilter();
+  applyDateRangeFilter();
 
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
 
@@ -1155,15 +1515,18 @@ function renderHistory() {
       entries.forEach((e) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${esc(e.entry_date || "")}</td>
-          <td>${esc(formatDateTime(e.created_at))}</td>
-          <td>${esc(e.ref || "")}</td>
-          <td>${esc(e.description || "")}</td>
-          <td>${esc(e.department || "")}</td>
-          <td>${esc(e.payment_method || "")}</td>
-          <td>${esc(e.client_vendor || "")}</td>
-          <td>${esc(e.remarks || "")}</td>
-        `;
+  <td>${esc(e.entry_date || "")}</td>
+  <td>${esc(formatDateTime(e.created_at))}</td>
+  <td>${esc(e.ref || "")}</td>
+  <td>${esc(e.description || "")}</td>
+  <td>${esc(e.department || "")}</td>
+  <td>${esc(e.payment_method || "")}</td>
+  <td>${esc(e.client_vendor || "")}</td>
+  <td>${esc(e.remarks || "")}</td>
+  <td>
+    <button class="btn" onclick="viewHistoryEntry('${e.id}')">View</button>
+  </td>
+`;
         tbody.appendChild(tr);
       });
     })
@@ -1180,6 +1543,77 @@ function formatDateTime(iso) {
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleString();
 }
+
+window.closeHistoryModal = function closeHistoryModal() {
+  const m = $("history-modal");
+  if (m) m.style.display = "none";
+};
+
+window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
+  if (!currentUser) return alert("Please login first.");
+
+  const modal = $("history-modal");
+  const linesBody = $("hm-lines");
+  if (!modal || !linesBody) return alert("History modal not found in HTML.");
+
+  // fetch header
+  const { data: entry, error } = await sb
+    .from("journal_entries")
+    .select("*")
+    .eq("id", journal_id)
+    .eq("user_id", currentUser.id)
+    .single();
+
+  if (error) {
+    console.error(error);
+    alert("Failed to load journal entry.");
+    return;
+  }
+
+  // fill header
+  $("hm-date").textContent = entry.entry_date || "";
+  $("hm-ref").textContent = entry.ref || "";
+  $("hm-desc").textContent = entry.description || "";
+  $("hm-dept").textContent = entry.department || "";
+  $("hm-pay").textContent = entry.payment_method || "";
+  $("hm-client").textContent = entry.client_vendor || "";
+  $("hm-remarks").textContent = entry.remarks || "";
+
+  // fetch lines
+  const jLines = await sbFetchJournalLinesForEntry(journal_id);
+
+  // render lines
+  linesBody.innerHTML = "";
+  let firstAccountId = "";
+
+  jLines.forEach((l) => {
+    if (!firstAccountId) firstAccountId = l.account_id || "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${esc(l.account_name || "")}</td>
+      <td style="text-align:right;">${money(l.debit || 0)}</td>
+      <td style="text-align:right;">${money(l.credit || 0)}</td>
+    `;
+    linesBody.appendChild(tr);
+  });
+
+  if (jLines.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3" style="text-align:center; padding:10px;">No lines found.</td>`;
+    linesBody.appendChild(tr);
+  }
+
+  // wire Edit/Delete button
+  const btn = $("hm-edit-btn");
+  if (btn) {
+    btn.onclick = () => {
+      const acct = encodeURIComponent(firstAccountId || "");
+      window.location.href = `./edit.html?journal_id=${encodeURIComponent(journal_id)}&account_id=${acct}`;
+    };
+  }
+
+  modal.style.display = "grid";
+};
 
 // ==============================
 // Restore session on refresh
@@ -1201,6 +1635,34 @@ function formatDateTime(iso) {
   } else {
     setUI(false);
   }
+
+  const isEditPage = window.location.pathname.endsWith("edit.html");
+if (isEditPage) {
+  const journal_id = getQueryParam("journal_id");
+  if (!journal_id) {
+    alert("Missing journal_id in URL.");
+    return;
+  }
+
+  // load COA so dropdown has options
+  COA = await loadCOAFromDbOrJson();
+  rebuildCoaIndex();
+
+  // fetch header + lines
+  const entry = await sbFetchJournalEntryById(journal_id);
+  const jLines = await sbFetchJournalLinesByJournalId(journal_id);
+
+  // optional: show header fields if edit.html has these ids
+  // (safe even if not present)
+  $("edit-date") && ( $("edit-date").value = entry?.entry_date || "" );
+  $("edit-ref") && ( $("edit-ref").value = entry?.ref || "" );
+  $("edit-desc") && ( $("edit-desc").value = entry?.description || "" );
+
+  // IMPORTANT: this must match your edit.html tbody id
+  // Your renderEditLines currently uses: "edit-lines-body"
+  renderEditLines(jLines);
+}
+  
 })();
 
 // ==============================
