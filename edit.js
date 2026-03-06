@@ -1,19 +1,18 @@
 // ==============================
-// Supabase Setup (same as app.js)
+// EDIT.JS (FULL WORKING)
 // ==============================
+
+// --- MUST MATCH YOUR app.js ---
 const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+console.log("✅ edit.js loaded"); // you should see this in console
+
 const $ = (id) => document.getElementById(id);
 
-let currentUser = null;
-let COA = [];
-let journalId = "";
-let returnUrl = "./index.html#ledger";
-
-// ---------- UI helpers ----------
 function setStatus(msg, isErr = false) {
   const el = $("status");
   if (!el) return;
@@ -21,9 +20,9 @@ function setStatus(msg, isErr = false) {
   el.style.color = isErr ? "crimson" : "";
 }
 
-function markRequired(el, bad) {
-  if (!el) return;
-  el.style.border = bad ? "2px solid crimson" : "";
+function getQueryParam(name) {
+  const u = new URL(window.location.href);
+  return u.searchParams.get(name) || "";
 }
 
 function parseMoney(v) {
@@ -32,221 +31,269 @@ function parseMoney(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// ---------- URL ----------
-function getParam(name) {
-  const u = new URL(window.location.href);
-  return u.searchParams.get(name) || "";
+function money(n) {
+  return (Number(n) || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-// ---------- Lines UI ----------
-function addLineRow(account_id = "", debit = 0, credit = 0) {
-  const tbody = $("e-lines");
-  if (!tbody) return;
+// ==============================
+// COA loading + resolver
+// ==============================
+let COA = [];
+let COA_BY_ID = {};
+let COA_BY_CODE = {};
 
-  const tr = document.createElement("tr");
+function rebuildCoaIndex() {
+  COA_BY_ID = {};
+  COA_BY_CODE = {};
+  (COA || []).forEach((a) => {
+    const id = String(a.id || "").trim();
+    const code = String(a.code || "").trim();
+    if (id) COA_BY_ID[id] = a;
+    if (code) COA_BY_CODE[code] = a;
+  });
+}
 
+// Old records might store account_id as code (like "1004").
+// New records store account_id as uuid.
+// This converts to uuid if possible.
+function resolveAccountId(rawAccountId, accountName) {
+  const raw = String(rawAccountId || "").trim();
+  if (!raw) return "";
+
+  // already a uuid id in COA
+  if (COA_BY_ID[raw]) return raw;
+
+  // maybe code
+  if (COA_BY_CODE[raw]?.id) return String(COA_BY_CODE[raw].id);
+
+  // maybe in account_name "1004 - Bank..."
+  const t = String(accountName || "");
+  if (t.includes(" - ")) {
+    const code = t.split(" - ")[0].trim();
+    if (COA_BY_CODE[code]?.id) return String(COA_BY_CODE[code].id);
+  }
+
+  return raw;
+}
+
+async function loadCOA(userId) {
+  const { data, error } = await sb
+    .from("coa_accounts")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_deleted", false)
+    .order("code", { ascending: true });
+
+  if (error) throw error;
+
+  COA = (data || []).map((r) => ({
+    id: r.id,
+    code: r.code || "",
+    name: r.name || "",
+    type: r.type || "",
+    normal: r.normal || "",
+  }));
+
+  rebuildCoaIndex();
+}
+
+// ==============================
+// Fetch entry + lines
+// ==============================
+async function fetchEntry(journalId, userId) {
+  const { data, error } = await sb
+    .from("journal_entries")
+    .select("*")
+    .eq("id", journalId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function fetchLines(journalId, userId, entryDate, ref) {
+  // try normal linked lines
+  const { data: linked, error: e1 } = await sb
+    .from("journal_lines")
+    .select("*")
+    .eq("journal_id", journalId)
+    .eq("user_id", userId)
+    .eq("is_deleted", false)
+    .order("created_at", { ascending: true });
+
+  if (e1) throw e1;
+  if (linked && linked.length) return linked;
+
+  // fallback for old rows (matched by date+ref)
+  const { data: legacy, error: e2 } = await sb
+    .from("journal_lines")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_deleted", false)
+    .eq("entry_date", entryDate)
+    .eq("ref", ref)
+    .order("created_at", { ascending: true });
+
+  if (e2) throw e2;
+
+  // repair: attach journal_id to legacy rows if they were null
+  if (legacy && legacy.length) {
+    await sb
+      .from("journal_lines")
+      .update({ journal_id: journalId })
+      .eq("user_id", userId)
+      .eq("entry_date", entryDate)
+      .eq("ref", ref)
+      .is("journal_id", null);
+  }
+
+  return legacy || [];
+}
+
+// ==============================
+// Render lines table
+// ==============================
+function buildAccountSelect(selectedId) {
   const sel = document.createElement("select");
+
   const opt0 = document.createElement("option");
   opt0.value = "";
   opt0.textContent = "Select account...";
   sel.appendChild(opt0);
 
-  const sorted = [...COA].sort((a, b) => {
-    const ca = Number(String(a.code || "").replace(/[^0-9]/g, "")) || 999999999;
-    const cb = Number(String(b.code || "").replace(/[^0-9]/g, "")) || 999999999;
-    if (ca !== cb) return ca - cb;
-    return String(a.name || "").localeCompare(String(b.name || ""));
-  });
-
-  sorted.forEach((a) => {
+  COA.forEach((a) => {
     const opt = document.createElement("option");
-    opt.value = a.id;
+    opt.value = a.id; // ✅ uuid
     opt.textContent = `${a.code} - ${a.name}`;
     sel.appendChild(opt);
   });
 
-  sel.value = account_id || "";
+  if (selectedId) sel.value = selectedId;
+  return sel;
+}
 
-  const inD = document.createElement("input");
-  inD.placeholder = "0.00";
-  inD.value = debit ? String(debit) : "";
+function addEmptyLine(prefill = null) {
+  const tbody = $("e-lines");
+  if (!tbody) return;
 
-  const inC = document.createElement("input");
-  inC.placeholder = "0.00";
-  inC.value = credit ? String(credit) : "";
+  const tr = document.createElement("tr");
 
-  const del = document.createElement("button");
-  del.textContent = "X";
-  del.onclick = () => tr.remove();
+  // account
+  const tdA = document.createElement("td");
 
-  const td1 = document.createElement("td");
-  td1.appendChild(sel);
+  const resolved = prefill
+    ? resolveAccountId(prefill.account_id, prefill.account_name)
+    : "";
 
-  const td2 = document.createElement("td");
-  td2.className = "right";
-  td2.appendChild(inD);
+  const sel = buildAccountSelect(resolved);
+  tdA.appendChild(sel);
 
-  const td3 = document.createElement("td");
-  td3.className = "right";
-  td3.appendChild(inC);
+  // debit
+  const tdD = document.createElement("td");
+  tdD.className = "right";
+  const iD = document.createElement("input");
+  iD.type = "text";
+  iD.value = prefill ? money(prefill.debit) : "0.00";
+  tdD.appendChild(iD);
 
-  const td4 = document.createElement("td");
-  td4.className = "right";
-  td4.appendChild(del);
+  // credit
+  const tdC = document.createElement("td");
+  tdC.className = "right";
+  const iC = document.createElement("input");
+  iC.type = "text";
+  iC.value = prefill ? money(prefill.credit) : "0.00";
+  tdC.appendChild(iC);
 
-  tr.appendChild(td1);
-  tr.appendChild(td2);
-  tr.appendChild(td3);
-  tr.appendChild(td4);
+  // delete row button
+  const tdX = document.createElement("td");
+  const bx = document.createElement("button");
+  bx.textContent = "X";
+  bx.onclick = () => tr.remove();
+  tdX.appendChild(bx);
+
+  tr.appendChild(tdA);
+  tr.appendChild(tdD);
+  tr.appendChild(tdC);
+  tr.appendChild(tdX);
 
   tbody.appendChild(tr);
 }
 
-// ---------- Load data ----------
-async function requireLogin() {
-  const { data } = await sb.auth.getSession();
-  currentUser = data.session?.user || null;
-
-  if (!currentUser) {
-    window.location.href = "./index.html";
-    return false;
-  }
-  return true;
-}
-
-async function loadCOA() {
-  // Prefer DB COA if you want, but JSON is ok for account_name display
-  try {
-    COA = await fetch("./data/coa.json").then((r) => r.json());
-    if (!Array.isArray(COA)) COA = [];
-  } catch {
-    COA = [];
+function renderLines(lines) {
+  const tbody = $("e-lines");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  (lines || []).forEach((l) => addEmptyLine(l));
+  if ((lines || []).length === 0) {
+    addEmptyLine();
+    addEmptyLine();
   }
 }
 
-async function loadJournal() {
-  const { data: entry, error: e1 } = await sb
-    .from("journal_entries")
-    .select("*")
-    .eq("id", journalId)
-    .eq("user_id", currentUser.id)
-    .maybeSingle();
+function collectLinesFromUI() {
+  const tbody = $("e-lines");
+  const rows = [...(tbody?.querySelectorAll("tr") || [])];
 
-  if (e1) {
-    console.error(e1);
-    setStatus("Failed loading journal entry.", true);
-    return;
-  }
+  const out = rows
+    .map((tr) => {
+      const sel = tr.querySelector("select");
+      const inputs = tr.querySelectorAll("input");
+      const account_uuid = sel?.value || "";
+      const debit = parseMoney(inputs?.[0]?.value);
+      const credit = parseMoney(inputs?.[1]?.value);
+      return { account_uuid, debit, credit };
+    })
+    .filter((x) => x.account_uuid && (x.debit !== 0 || x.credit !== 0));
 
-  if (!entry || entry.is_deleted) {
-    setStatus("This entry does not exist (or already deleted).", true);
-    return;
-  }
-
-  $("e-date").value = entry.entry_date || "";
-  $("e-ref").value = entry.ref || "";
-  $("e-desc").value = entry.description || "";
-  $("e-dept").value = entry.department || "";
-  $("e-pay").value = entry.payment_method || "";
-  $("e-client").value = entry.client_vendor || "";
-  $("e-remarks").value = entry.remarks || "";
-
-  const { data: lines, error: e2 } = await sb
-    .from("journal_lines")
-    .select("*")
-    .eq("journal_id", journalId)
-    .eq("user_id", currentUser.id)
-    .eq("is_deleted", false)
-    .order("created_at", { ascending: true });
-
-  if (e2) {
-    console.error(e2);
-    setStatus("Failed loading journal lines.", true);
-    return;
-  }
-
-  $("e-lines").innerHTML = "";
-  (lines || []).forEach((l) => addLineRow(l.account_id, l.debit, l.credit));
-
-  if ((lines || []).length < 2) {
-    addLineRow();
-    addLineRow();
-  }
+  return out;
 }
 
-// ---------- Save ----------
-async function saveChanges() {
+function isBalanced(lines) {
+  let d = 0,
+    c = 0;
+  lines.forEach((l) => {
+    d += l.debit;
+    c += l.credit;
+  });
+  return Math.abs(d - c) < 0.00001;
+}
+
+// ==============================
+// SAVE + DELETE
+// ==============================
+async function saveChanges(journalId, userId) {
   const entry_date = $("e-date")?.value || "";
   const ref = ($("e-ref")?.value || "").trim();
   const description = ($("e-desc")?.value || "").trim();
-
-  markRequired($("e-date"), !entry_date);
-  markRequired($("e-ref"), !ref);
-  markRequired($("e-desc"), !description);
-
-  if (!entry_date || !ref || !description) {
-    setStatus("Please fill all required (*) fields.", true);
-    return;
-  }
-
   const department = ($("e-dept")?.value || "").trim();
   const payment_method = ($("e-pay")?.value || "").trim();
   const client_vendor = ($("e-client")?.value || "").trim();
   const remarks = ($("e-remarks")?.value || "").trim();
 
-  const rows = [...$("e-lines").querySelectorAll("tr")];
-  const newLines = [];
-  let totalD = 0;
-  let totalC = 0;
-
-  for (const r of rows) {
-    const sel = r.querySelector("select");
-    const inputs = r.querySelectorAll("input");
-
-    const account_id = sel?.value || "";
-    const d = parseMoney(inputs[0]?.value);
-    const c = parseMoney(inputs[1]?.value);
-
-    if (!account_id) continue;
-    if (!d && !c) continue;
-
-    totalD += d;
-    totalC += c;
-
-    const acct = COA.find((a) => a.id === account_id);
-    const account_name = acct ? `${acct.code} - ${acct.name}` : "";
-
-newLines.push({
-  user_id: currentUser.id,
-  journal_id: journalId,
-  entry_date,
-  ref,
-
-  description,
-  department,
-  payment_method,
-  client_vendor,
-  remarks,
-
-  account_id,
-  account_name,
-  debit: d,
-  credit: c,
-  is_deleted: false,
-});
+  if (!entry_date || !ref || !description) {
+    setStatus("Fill Date, Ref No, and Description.", true);
+    return;
   }
 
-  if (newLines.length < 2) {
+  const uiLines = collectLinesFromUI();
+  if (uiLines.length < 2) {
     setStatus("Add at least 2 lines.", true);
     return;
   }
 
-  if (Math.abs(totalD - totalC) > 0.00001) {
-    setStatus("Match the debit and credit.", true);
+  if (!isBalanced(uiLines)) {
+    setStatus("Not balanced ❌ Debit must equal Credit.", true);
     return;
   }
 
-  const { error: e1 } = await sb
+  setStatus("Saving...");
+
+  // 1) update header
+  const { error: headErr } = await sb
     .from("journal_entries")
     .update({
       entry_date,
@@ -259,52 +306,80 @@ newLines.push({
       updated_at: new Date().toISOString(),
     })
     .eq("id", journalId)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", userId);
 
-  if (e1) {
-    console.error(e1);
-    setStatus("Save failed (header). Check policies/unique ref rules.", true);
+  if (headErr) {
+    console.error(headErr);
+    setStatus("Header update failed (RLS/policy).", true);
     return;
   }
 
-  const { error: e2 } = await sb
+  // 2) soft delete old lines
+  const { error: delErr } = await sb
     .from("journal_lines")
     .update({ is_deleted: true })
     .eq("journal_id", journalId)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", userId);
 
-  if (e2) {
-    console.error(e2);
-    setStatus("Save failed (lines delete). Check UPDATE policy.", true);
+  if (delErr) {
+    console.error(delErr);
+    setStatus("Failed to update lines (soft delete).", true);
     return;
   }
 
-  const { error: e3 } = await sb.from("journal_lines").insert(newLines);
+  // 3) insert fresh lines
+  const fresh = uiLines.map((l) => {
+    const acct = COA_BY_ID[l.account_uuid];
+    const account_name = acct ? `${acct.code} - ${acct.name}` : "";
 
-  if (e3) {
-    console.error(e3);
-    setStatus("Save failed (lines insert). Check INSERT policy.", true);
+    return {
+      user_id: userId,
+      journal_id: journalId,
+      entry_date,
+      ref,
+      account_id: l.account_uuid, // ✅ uuid always
+      account_name,
+      debit: l.debit,
+      credit: l.credit,
+      is_deleted: false,
+      created_at: new Date().toISOString(),
+    };
+  });
+
+  const { error: insErr } = await sb.from("journal_lines").insert(fresh);
+
+  if (insErr) {
+    console.error(insErr);
+    setStatus("Insert failed (RLS/policy).", true);
     return;
   }
 
-  setStatus("Saved ✅ Returning to ledger...");
-  setTimeout(() => (window.location.href = returnUrl), 600);
+ setStatus("Saved ✅");
+
+    // ✅ go back to ledger after save
+  const acctId = getQueryParam("account_id") || "";
+  const url = new URL("./index.html", window.location.href);
+  url.searchParams.set("account_id", acctId);
+  url.hash = "ledger";
+  window.location.replace(url.toString());
+  return;
 }
 
-// ---------- Delete ----------
-async function deleteEntry() {
-  const ok = confirm("Delete this journal entry? (It will be hidden, not permanently removed.)");
+async function deleteEntry(journalId, userId) {
+  const ok = confirm("Delete this journal entry?\n\n(This is soft delete.)");
   if (!ok) return;
+
+  setStatus("Deleting...");
 
   const { error: e1 } = await sb
     .from("journal_entries")
     .update({ is_deleted: true, updated_at: new Date().toISOString() })
     .eq("id", journalId)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", userId);
 
   if (e1) {
     console.error(e1);
-    setStatus("Delete failed (entry). Check UPDATE policy.", true);
+    setStatus("Failed to delete entry (RLS/policy).", true);
     return;
   }
 
@@ -312,41 +387,74 @@ async function deleteEntry() {
     .from("journal_lines")
     .update({ is_deleted: true })
     .eq("journal_id", journalId)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", userId);
 
   if (e2) {
     console.error(e2);
-    setStatus("Delete failed (lines). Check UPDATE policy.", true);
+    setStatus("Entry deleted, but failed to delete lines.", true);
     return;
   }
 
-  setStatus("Deleted ✅ Returning to ledger...");
-  setTimeout(() => (window.location.href = returnUrl), 600);
+  setStatus("Deleted ✅");
+
+  // ✅ go back to ledger
+  const acctId = getQueryParam("account_id") || "";
+  const url = new URL("./index.html", window.location.href);
+  url.searchParams.set("account_id", acctId);
+  url.hash = "ledger";
+  window.location.replace(url.toString());
 }
 
-// ---------- Boot ----------
-(async function boot() {
-  journalId = getParam("journal_id");
-  const acct = getParam("account_id");
+// ==============================
+// INIT
+// ==============================
+(async function initEditPage() {
+  try {
+    const journalId = getQueryParam("journal_id");
+    if (!journalId) {
+      setStatus("Missing journal_id in URL", true);
+      return;
+    }
 
-  // ✅ correct format: query first, hash last
-  returnUrl = acct
-    ? `./index.html?account_id=${encodeURIComponent(acct)}#ledger`
-    : "./index.html#ledger";
+    const { data, error } = await sb.auth.getSession();
+    if (error) throw error;
 
-  if (!journalId) {
-    setStatus("Missing journal_id in URL.", true);
-    return;
+    const user = data?.session?.user;
+    if (!user) {
+      setStatus("Please login first (open index.html and login).", true);
+      return;
+    }
+
+    // load COA first so selects have options
+    await loadCOA(user.id);
+
+    // load entry + fill header fields
+    const entry = await fetchEntry(journalId, user.id);
+
+    $("e-date").value = entry.entry_date || "";
+    $("e-ref").value = entry.ref || "";
+    $("e-desc").value = entry.description || "";
+    $("e-dept").value = entry.department || "";
+    $("e-pay").value = entry.payment_method || "";
+    $("e-client").value = entry.client_vendor || "";
+    $("e-remarks").value = entry.remarks || "";
+
+    // load + render lines
+const jLines = await fetchLines(journalId, user.id, entry.entry_date, entry.ref);
+renderLines(jLines);
+
+    // wire buttons
+    $("btn-add").onclick = () => addEmptyLine();
+    $("btn-save").onclick = () => saveChanges(journalId, user.id);
+    $("btn-delete").onclick = () => deleteEntry(journalId, user.id);
+    $("btn-back").onclick = () => {
+      const acctId = getQueryParam("account_id") || "";
+      window.location.href = `./index.html?account_id=${encodeURIComponent(acctId)}#ledger`;
+    };
+
+    setStatus("Loaded ✅");
+  } catch (e) {
+    console.error(e);
+    setStatus(e?.message || "Failed to load edit page.", true);
   }
-
-  const ok = await requireLogin();
-  if (!ok) return;
-
-  await loadCOA();
-  await loadJournal();
-
-  $("btn-add").onclick = () => addLineRow();
-  $("btn-save").onclick = saveChanges;
-  $("btn-delete").onclick = deleteEntry;
-  $("btn-back").onclick = () => (window.location.href = returnUrl);
 })();
