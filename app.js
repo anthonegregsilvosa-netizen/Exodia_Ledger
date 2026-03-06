@@ -225,37 +225,41 @@ async function sbFetchJournalLines() {
   return (data || []).map(normalizeLine);
 }
 
-async function sbFetchJournalLinesForEntry(journal_id) {
+async function sbFetchJournalEntryById(id) {
+  if (!currentUser) return null;
+
+  const { data, error } = await sb
+    .from("journal_entries")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", currentUser.id)
+    .single();
+
+  if (error) {
+    console.error("Entry by ID fetch error:", error);
+    return null;
+  }
+
+  return data;
+}
+
+async function sbFetchJournalLinesByJournalId(journal_id) {
   if (!currentUser) return [];
 
   const { data, error } = await sb
     .from("journal_lines")
     .select("*")
-    .eq("user_id", currentUser.id)
     .eq("journal_id", journal_id)
+    .eq("user_id", currentUser.id)
     .eq("is_deleted", false)
     .order("created_at", { ascending: true });
 
   if (error) {
-    console.error("Lines fetch error:", error);
+    console.error("Lines by journal_id fetch error:", error);
     return [];
   }
 
   return data || [];
-}
-
-async function sbInsertJournalLines(rows) {
-  const { error } = await sb.from("journal_lines").insert(rows);
-  if (error) throw error;
-}
-
-async function loadLinesFromDb() {
-  try {
-    return await sbFetchJournalLines();
-  } catch (e) {
-    console.error("loadLinesFromDb failed:", e);
-    return [];
-  }
 }
 
 // ==============================
@@ -660,7 +664,7 @@ window.showWorksheet = function (view) {
   if (pl) pl.style.display = (view === "pl") ? "block" : "none";
   if (sfp) sfp.style.display = (view === "sfp") ? "block" : "none";
 
-  if (view === "trial") showWorksheet("trial");
+  if (view === "trial") renderTrialBalance();
   if (view === "pl") renderProfitAndLoss();
   if (view === "sfp") renderStatementOfFinancialPosition();
 };
