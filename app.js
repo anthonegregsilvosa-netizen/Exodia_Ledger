@@ -10,6 +10,7 @@ const LEDGER_ACCOUNT_KEY = "exodiaLedger.ledgerAccount.v1";
 const JOURNAL_VIEW_KEY = "exodiaLedger.journalView.v1";
 const FILTER_FROM_KEY = "exodiaLedger.filterFrom.v1";
 const FILTER_TO_KEY = "exodiaLedger.filterTo.v1";
+const WORKSHEET_VIEW_KEY = "exodiaLedger.worksheetView.v1";
 
 // ==============================
 // Supabase Setup
@@ -688,18 +689,47 @@ window.showJournal = function (which) {
   if (which === "history") renderHistory();
 };
 
-window.showWorksheet = function (view) {
-  const trial = $("ws-trial");
-  const pl = $("ws-pl");
-  const sfp = $("ws-sfp");
+window.show = function (view) {
+  if (view === "journal-history") view = "journal";
 
-  if (trial) trial.style.display = (view === "trial") ? "block" : "none";
-  if (pl) pl.style.display = (view === "pl") ? "block" : "none";
-  if (sfp) sfp.style.display = (view === "sfp") ? "block" : "none";
+  localStorage.setItem(LAST_VIEW_KEY, view);
 
-  if (view === "trial") renderTrialBalance();
-  if (view === "pl") renderProfitAndLoss();
-  if (view === "sfp") renderStatementOfFinancialPosition();
+  ["coa", "journal", "ledger", "trial"].forEach((v) => {
+    const el = $(v);
+    if (!el) return;
+    el.style.display = v === view ? "block" : "none";
+  });
+
+  const hist = $("journal-history");
+  if (hist) hist.style.display = "none";
+
+  const coaTb = $("coa-toolbar");
+  if (coaTb) coaTb.style.display = (view === "coa") ? "block" : "none";
+
+  const journalTb = $("journal-toolbar");
+  if (journalTb) journalTb.style.display = (view === "journal") ? "block" : "none";
+
+  const dateBar = $("date-range-bar");
+  const journalMode = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
+
+  if (view === "journal" && journalMode === "entry") {
+    if (dateBar) dateBar.style.display = "none";
+  } else {
+    if (dateBar) dateBar.style.display = "flex";
+  }
+
+  if (view === "coa") renderCOA();
+  if (view === "ledger") renderLedger();
+
+  if (view === "trial") {
+    const savedWorksheetView = localStorage.getItem(WORKSHEET_VIEW_KEY) || "trial";
+    showWorksheet(savedWorksheetView);
+  }
+
+  if (view === "journal") {
+    const savedJournalView = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
+    showJournal(savedJournalView);
+  }
 };
 
 // ==============================
@@ -1508,33 +1538,32 @@ async function initAppAfterLogin() {
   const ledgerSel = $("ledger-account");
   if (ledgerSel) ledgerSel.innerHTML = "";
 
-  // restore saved date range
-const savedFrom = localStorage.getItem(FILTER_FROM_KEY) || "";
-const savedTo = localStorage.getItem(FILTER_TO_KEY) || "";
+  const savedFrom = localStorage.getItem(FILTER_FROM_KEY) || "";
+  const savedTo = localStorage.getItem(FILTER_TO_KEY) || "";
 
-filterFrom = savedFrom;
-filterTo = savedTo;
+  filterFrom = savedFrom;
+  filterTo = savedTo;
 
-if ($("filter-from")) $("filter-from").value = savedFrom;
-if ($("filter-to")) $("filter-to").value = savedTo;
+  if ($("filter-from")) $("filter-from").value = savedFrom;
+  if ($("filter-to")) $("filter-to").value = savedTo;
 
   applyDateRangeFilter();
 
   const lastView = localStorage.getItem(LAST_VIEW_KEY) || "coa";
-
-// If coming back from edit page, open ledger and auto-select account
-if (window.location.hash === "#ledger") {
-  show("ledger");
-
   const acctFromUrl = getQueryParam("account_id");
-  if (acctFromUrl && $("ledger-account")) {
-    $("ledger-account").value = acctFromUrl;
-    renderLedger();
+  const savedLedgerAccount = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
+
+    // clean URL so next refresh follows saved page
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else {
+    show(lastView);
+
+    if (lastView === "ledger" && $("ledger-account")) {
+      $("ledger-account").value = savedLedgerAccount || "";
+      renderLedger();
+    }
   }
-} else {
-  show(lastView);
 }
-} // ✅ THIS closes initAppAfterLogin()
 
 // ==============================
 // Render Journal History ✅
