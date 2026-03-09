@@ -689,6 +689,9 @@ window.showJournal = function (which) {
   if (which === "history") renderHistory();
 };
 
+// ==============================
+// Tabs
+// ==============================
 window.show = function (view) {
   if (view === "journal-history") view = "journal";
 
@@ -729,55 +732,6 @@ window.show = function (view) {
   if (view === "journal") {
     const savedJournalView = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
     showJournal(savedJournalView);
-  }
-};
-
-// ==============================
-// Tabs
-// ==============================
-window.show = function (view) {
-  // treat "journal-history" as a sub-view inside journal
-  if (view === "journal-history") view = "journal";
-
-  localStorage.setItem(LAST_VIEW_KEY, view);
-
-  // Main sections only
-  ["coa", "journal", "ledger", "trial"].forEach((v) => {
-    const el = $(v);
-    if (!el) return;
-    el.style.display = v === view ? "block" : "none";
-  });
-
-  // Always hide journal-history unless journal sub-tab says "history"
-  const hist = $("journal-history");
-  if (hist) hist.style.display = "none";
-
-  // Toolbars
-  const coaTb = $("coa-toolbar");
-  if (coaTb) coaTb.style.display = (view === "coa") ? "block" : "none";
-
-  const journalTb = $("journal-toolbar");
-  if (journalTb) journalTb.style.display = (view === "journal") ? "block" : "none";
-
-    // Show date range on reports/history, hide on Journal Entry
-  const dateBar = $("date-range-bar");
-  const journalMode = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
-
-  if (view === "journal" && journalMode === "entry") {
-    if (dateBar) dateBar.style.display = "none";
-  } else {
-    if (dateBar) dateBar.style.display = "flex";
-  }
-
-  // Render main views + journal sub-view
-  if (view === "coa") renderCOA();
-  if (view === "ledger") renderLedger();
-  if (view === "trial") showWorksheet("trial");
-
-  if (view === "journal") {
-    // default: restore last journal sub-tab or show entry
-    const saved = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
-    showJournal(saved);
   }
 };
 
@@ -1553,7 +1507,15 @@ async function initAppAfterLogin() {
   const acctFromUrl = getQueryParam("account_id");
   const savedLedgerAccount = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
 
-    // clean URL so next refresh follows saved page
+  if (window.location.hash === "#ledger" || acctFromUrl) {
+    show("ledger");
+
+    if ($("ledger-account")) {
+      $("ledger-account").value = acctFromUrl || savedLedgerAccount || "";
+    }
+
+    renderLedger();
+
     window.history.replaceState({}, document.title, window.location.pathname);
   } else {
     show(lastView);
