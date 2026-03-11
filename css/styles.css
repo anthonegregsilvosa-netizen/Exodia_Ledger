@@ -1,5 +1,11 @@
+#app{
+  border-top:4px solid #ff6a00;
+}
+
 body{
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f6f8;
+  margin:0;
 }
 
 /* Filters */
