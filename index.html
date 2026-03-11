@@ -10,13 +10,13 @@
 <body>
 
 <!-- ========================= AUTH ========================= -->
-<div id="auth-box" style="border:1px solid #ccc; padding:10px; margin:10px;">
+<div id="auth-box">
   <div id="auth-logged-out">
-    <input id="auth-email" type="email" placeholder="Email" style="width:220px;">
-    <input id="auth-pass" type="password" placeholder="Password" style="width:220px;">
+    <input id="auth-email" type="email" placeholder="Email">
+    <input id="auth-pass" type="password" placeholder="Password">
     <button id="auth-toggle-pass" type="button">👁</button>
     <button id="auth-login-btn" onclick="signIn()" disabled>Login</button>
-    <span id="auth-msg" style="margin-left:10px;"></span>
+   <span id="auth-msg"></span>
   </div>
 
   <div id="auth-logged-in" style="display:none;">
