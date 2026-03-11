@@ -29,12 +29,14 @@
 <!-- ========================= APP ========================= -->
 <div id="app" style="display:none;">
 
-  <header class="app-header">
-    <button onclick="show('coa')">Chart of Accounts</button>
-    <button onclick="show('journal')">Journal Entry</button>
-    <button onclick="show('ledger')">General Ledger</button>
-    <button onclick="show('trial')">Worksheet</button>
-  </header>
+ <header class="app-header">
+  <div class="top-menu">
+    <button class="top-menu-btn" onclick="show('coa')">Chart of Accounts</button>
+    <button class="top-menu-btn" onclick="show('journal')">Journal Entry</button>
+    <button class="top-menu-btn" onclick="show('ledger')">General Ledger</button>
+    <button class="top-menu-btn" onclick="show('trial')">Worksheet</button>
+  </div>
+</header>
 
   <!-- ✅ COA OPTIONS BAR (only show on COA tab via JS) -->
 <div id="coa-toolbar" style="display:none; margin:10px 0; padding:8px; border:1px solid #ccc;">
