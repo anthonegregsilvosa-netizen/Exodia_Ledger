@@ -38,33 +38,36 @@
   </div>
 </header>
 
-  <!-- ✅ COA OPTIONS BAR (only show on COA tab via JS) -->
-<div id="coa-toolbar" style="display:none; margin:10px 0; padding:8px; border:1px solid #ccc;">
-  <b>Chart of Accounts Options:</b>
-  <button onclick="openAddCoaModal()">+ Add Account</button>
+<!-- ✅ COA OPTIONS BAR (only show on COA tab via JS) -->
+<div id="coa-toolbar" style="display:none;">
+  <div class="sub-toolbar">
+    <div class="sub-toolbar-left">
+      <span class="sub-toolbar-label">Chart of Accounts Options</span>
+      <button class="btn-add" onclick="openAddCoaModal()">+ Add Account</button>
+    </div>
+  </div>
 </div>
 
-  <!-- ✅ DATE RANGE FILTER -->
-<div id="date-range-bar" style="margin:10px 0; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-  <b>Date Range:</b>
+<!-- ✅ DATE RANGE FILTER -->
+<div id="date-range-bar" style="display:flex;">
+  <div class="sub-toolbar">
+    <div class="sub-toolbar-right">
+      <span class="sub-toolbar-label">Date Range</span>
 
-  <label>
-    From:
-    <input type="date" id="filter-from">
-  </label>
+      <label class="date-field">
+        <span>From</span>
+        <input type="date" id="filter-from">
+      </label>
 
-  <label>
-    To:
-   <input type="date" id="filter-to">
-  </label>
+      <label class="date-field">
+        <span>To</span>
+        <input type="date" id="filter-to">
+      </label>
 
-  <button onclick="applyDateRangeFilter()" class="btn primary">
-Apply
-</button>
-
-  <button onclick="clearDateRange()" class="btn">
-    Clear
-  </button>
+      <button onclick="applyDateRangeFilter()" class="btn-apply">Apply</button>
+      <button onclick="clearDateRange()" class="btn-clear">Clear</button>
+    </div>
+  </div>
 </div>
   
   <!-- ✅ JOURNAL OPTIONS BAR (only show on Journal tab via JS) -->
