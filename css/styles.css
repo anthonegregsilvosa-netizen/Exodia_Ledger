@@ -659,3 +659,43 @@ CHART OF ACCOUNTS - CLEAN FINAL
 .coa-menu .danger:hover{
   background: #ffe6d8;
 }
+
+/* =========================
+TOP MENU NAVIGATION
+========================= */
+
+.app-header{
+  padding: 14px 20px;
+  border-bottom: 1px solid #ece2d9;
+  background: #ffffff;
+}
+
+.top-menu{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.top-menu-btn{
+  padding: 10px 18px;
+  border: 1px solid #ffd2b3;
+  background: linear-gradient(180deg, #fffaf6 0%, #fff2e8 100%);
+  color: #8a420c;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 14px rgba(255, 106, 0, 0.08);
+}
+
+.top-menu-btn:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.top-menu-btn:active{
+  transform: translateY(0);
+}
