@@ -438,3 +438,12 @@ AUTH BOX
 #auth-msg{
   margin-left:10px;
 }
+
+/* =========================
+APP HEADER
+========================= */
+
+.app-header{
+  padding:12px;
+  border-bottom:1px solid #ccc;
+}
