@@ -1324,6 +1324,11 @@ function renderProfitAndLoss() {
 
   const net = totalRevenue - totalExpense;
 
+  if (Math.abs(totalRevenue) < 0.00001) totalRevenue = 0;
+  if (Math.abs(totalExpense) < 0.00001) totalExpense = 0;
+  let finalNet = net;
+  if (Math.abs(finalNet) < 0.00001) finalNet = 0;
+
   tbody.innerHTML = `
     <tr>
       <td><b>Total Revenue</b></td>
@@ -1757,7 +1762,12 @@ function num(v) {
 }
 
 function money(n) {
-  return (Number(n) || 0).toLocaleString(undefined, {
+  let val = Number(n) || 0;
+
+  // fix negative zero / tiny floating errors
+  if (Math.abs(val) < 0.00001) val = 0;
+
+  return val.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
