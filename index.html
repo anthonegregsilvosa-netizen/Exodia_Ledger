@@ -71,10 +71,14 @@
 </div>
   
   <!-- ✅ JOURNAL OPTIONS BAR (only show on Journal tab via JS) -->
-<div id="journal-toolbar" style="display:none; margin:10px 0; padding:8px; border:1px solid #ccc;">
-  <b>Journal Options:</b>
-  <button onclick="showJournal('entry')">Journal Entry</button>
-  <button onclick="showJournal('history')">Journal History</button>
+<div id="journal-toolbar" style="display:none;">
+  <div class="sub-toolbar">
+    <div class="sub-toolbar-left">
+      <span class="sub-toolbar-label">Journal Options</span>
+      <button class="top-menu-btn" onclick="showJournal('entry')">Journal Entry</button>
+      <button class="top-menu-btn" onclick="showJournal('history')">Journal History</button>
+    </div>
+  </div>
 </div>
 
   <!-- ========================= COA ========================= -->
