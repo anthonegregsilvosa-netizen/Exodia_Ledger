@@ -2089,11 +2089,14 @@ doc.addImage(logoData, "PNG", logoX, logoY, logoWidth, logoHeight);
   doc.setTextColor(...COLOR_BLACK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
-  doc.text(reportTitle, 14, 48);
+  doc.text(reportTitle, 14, 46);
 
 doc.setFont("helvetica", "normal");
-doc.setFontSize(10);
+doc.setFontSize(9.5);
 doc.setTextColor(...COLOR_GRAY);
+if (subtitle) {
+  doc.text(subtitle, 14, 52);
+}
 
 if (subtitle) {
   doc.text(subtitle, 14, 54);
@@ -2105,23 +2108,23 @@ if (subtitle) {
 
   doc.setDrawColor(...COLOR_ORANGE);
   doc.setLineWidth(0.5);
-  doc.roundedRect(14, 50, pageWidth - 28, 32, 3, 3, "S");
+  doc.roundedRect(14, 58, pageWidth - 28, 32, 3, 3, "S");
 
   doc.setTextColor(...COLOR_BLACK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("Report Information", 18, 57);
+  doc.text("Report Information", 18, 65);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(`Document: ${reportTitle}`, 18, 62);
-  doc.text(`Prepared for: Internal Management Reporting`, 18, 67);
-  doc.text(`Generated on: ${generatedOn}`, 18, 72);
-  doc.text(`Source: Exodia Ledger System`, 18, 77);
-
+  doc.text(`Document: ${reportTitle}`, 18, 70);
+  doc.text(`Prepared for: Internal Management Reporting`, 18, 75);
+  doc.text(`Generated on: ${generatedOn}`, 18, 80);
+  doc.text(`Source: Exodia Ledger System`, 18, 85);
+  
   // Table
   doc.autoTable({
-    startY: 88,
+    startY: 96,
     head: [["Particulars", "Amount"]],
     body: bodyRows,
     theme: "grid",
