@@ -2066,13 +2066,17 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
 
   // Header
   doc.setFillColor(...COLOR_BLACK);
-  doc.rect(0, 0, pageWidth, 22, "F");
+  doc.rect(0, 0, pageWidth, 28, "F");
 
   doc.setFillColor(...COLOR_ORANGE);
-  doc.rect(0, 22, pageWidth, 5, "F");
+  doc.rect(0, 28, pageWidth, 4, "F");
 
   if (logoData) {
-    doc.addImage(logoData, "PNG", 14, 4, 52, 12);
+const logoWidth = 60;
+const logoHeight = 12;
+const logoX = (pageWidth - logoWidth) / 2;
+
+doc.addImage(logoData, "PNG", logoX, 5, logoWidth, logoHeight);
   } else {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
@@ -2084,18 +2088,18 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
   doc.setTextColor(...COLOR_BLACK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
-  doc.text(reportTitle, 14, 38);
+  doc.text(reportTitle, 14, 44);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...COLOR_GRAY);
   if (subtitle) {
-    doc.text(subtitle, 14, 44);
+    doc.text(subtitle, 14, 50);
   }
 
   // Information box
   doc.setFillColor(...COLOR_LIGHT);
-  doc.roundedRect(14, 50, pageWidth - 28, 32, 3, 3, "F");
+  doc.roundedRect(14, 58, pageWidth - 28, 32, 3, 3, "F");
 
   doc.setDrawColor(...COLOR_ORANGE);
   doc.setLineWidth(0.5);
