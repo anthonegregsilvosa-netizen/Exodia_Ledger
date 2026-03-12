@@ -2071,60 +2071,61 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
   doc.setFillColor(...COLOR_ORANGE);
   doc.rect(0, 34, pageWidth, 4, "F");
 
-  if (logoData) {
-  const logoWidth = 28;
-  const logoHeight = 20;
+if (logoData) {
+  const logoWidth = 24;
+  const logoHeight = 18;
   const logoX = (pageWidth - logoWidth) / 2;
-  const logoY = 6;
+  const logoY = 5;
 
   doc.addImage(logoData, "PNG", logoX, logoY, logoWidth, logoHeight);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(companyName, pageWidth / 2, 28, { align: "center" });
 } else {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text(companyName, 14, 18);
+  doc.setFontSize(13);
+  doc.text(companyName, pageWidth / 2, 20, { align: "center" });
 }
 
   // Title
   doc.setTextColor(...COLOR_BLACK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
-  doc.text(reportTitle, 14, 46);
+  doc.text(reportTitle, 14, 50);
 
 doc.setFont("helvetica", "normal");
 doc.setFontSize(9.5);
 doc.setTextColor(...COLOR_GRAY);
 if (subtitle) {
-  doc.text(subtitle, 14, 52);
-}
-
-if (subtitle) {
-  doc.text(subtitle, 14, 54);
+  doc.text(subtitle, 14, 56);
 }
 
   // Information box
   doc.setFillColor(...COLOR_LIGHT);
-  doc.roundedRect(14, 58, pageWidth - 28, 32, 3, 3, "F");
+  doc.roundedRect(14, 64, pageWidth - 28, 32, 3, 3, "F");
 
   doc.setDrawColor(...COLOR_ORANGE);
   doc.setLineWidth(0.5);
-  doc.roundedRect(14, 58, pageWidth - 28, 32, 3, 3, "S");
+  doc.roundedRect(14, 64, pageWidth - 28, 32, 3, 3, "S");
 
   doc.setTextColor(...COLOR_BLACK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("Report Information", 18, 65);
+  doc.text("Report Information", 18, 71);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(`Document: ${reportTitle}`, 18, 70);
-  doc.text(`Prepared for: Internal Management Reporting`, 18, 75);
-  doc.text(`Generated on: ${generatedOn}`, 18, 80);
-  doc.text(`Source: Exodia Ledger System`, 18, 85);
+  doc.text(`Document: ${reportTitle}`, 18, 76);
+  doc.text(`Prepared for: Internal Management Reporting`, 18, 81);
+  doc.text(`Generated on: ${generatedOn}`, 18, 86);
+  doc.text(`Source: Exodia Ledger System`, 18, 91);
   
   // Table
   doc.autoTable({
-    startY: 96,
+    startY: 102,
     head: [["Particulars", "Amount"]],
     body: bodyRows,
     theme: "grid",
