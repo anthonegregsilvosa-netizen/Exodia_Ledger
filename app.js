@@ -2072,8 +2072,8 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
   doc.rect(0, 28, pageWidth, 4, "F");
 
   if (logoData) {
-const logoWidth = 60;
-const logoHeight = 12;
+const logoWidth = 50;
+const logoHeight = 10;
 const logoX = (pageWidth - logoWidth) / 2;
 
 doc.addImage(logoData, "PNG", logoX, 5, logoWidth, logoHeight);
