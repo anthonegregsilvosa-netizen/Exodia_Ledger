@@ -786,3 +786,174 @@ SUB TOOLBAR
 .btn-clear:hover{
   background: #ffe9d8;
 }
+
+/* =========================
+JOURNAL ENTRY - PREMIUM CLEAN
+========================= */
+
+#journal{
+  padding: 24px;
+  max-width: 1100px;
+}
+
+#journal h2{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 40px;
+  font-weight: 700;
+  margin: 6px 0 22px;
+  color: #181818;
+  letter-spacing: -0.6px;
+}
+
+.je-card{
+  max-width: 980px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfa 100%);
+  border: 1px solid #f0ddd0;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.06);
+  padding: 22px;
+  margin-top: 12px;
+}
+
+.je-section-title{
+  font-size: 18px;
+  font-weight: 800;
+  margin: 2px 0 14px;
+  color: #2b2b2b;
+}
+
+.je-grid{
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 14px;
+  max-width: 940px;
+}
+
+.je-grid label{
+  display: grid;
+  gap: 7px;
+  font-size: 14px;
+  color: #4b4b4b;
+  font-weight: 600;
+}
+
+.je-grid input,
+.je-grid textarea,
+.je-grid select{
+  border: 1px solid #e7cdb8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 13px 14px;
+  font-size: 15px;
+  transition: all 0.18s ease;
+}
+
+.je-grid input:focus,
+.je-grid textarea:focus,
+.je-grid select:focus{
+  outline: none;
+  border-color: #ff8a3d;
+  box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.10);
+}
+
+.je-lines-wrap{
+  margin-top: 22px;
+}
+
+.je-lines-table{
+  width: 100%;
+  max-width: 940px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+  border: 1px solid #f0ddd0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.04);
+}
+
+.je-lines-table th{
+  background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  border-bottom: 2px solid #ff7a1a;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.je-lines-table td{
+  border-bottom: 1px solid #f3e3d7;
+  padding: 10px 8px;
+  vertical-align: middle;
+  background: #fff;
+}
+
+.je-lines-table tr:nth-child(even) td{
+  background: #fffaf6;
+}
+
+.je-lines-table input,
+.je-lines-table select{
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #e4ccb7;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 15px;
+  background: #fff;
+  transition: all 0.18s ease;
+}
+
+.je-lines-table input:focus,
+.je-lines-table select:focus{
+  outline: none;
+  border-color: #ff8a3d;
+  box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
+}
+
+.je-actions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.btn-soft{
+  padding: 10px 15px;
+  border: 1px solid #f0c3a1;
+  background: #fff4eb;
+  color: #8a420c;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+
+.btn-soft:hover{
+  background: #ff6a00;
+  color: #fff;
+  border-color: #ff6a00;
+}
+
+.btn-dark{
+  padding: 10px 18px;
+  border: 1px solid #222;
+  background: #222;
+  color: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: all 0.18s ease;
+}
+
+.btn-dark:hover{
+  background: #111;
+}
+
+.je-status{
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #444;
+}
