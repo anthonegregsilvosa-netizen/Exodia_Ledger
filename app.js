@@ -1826,6 +1826,287 @@ window.downloadTrialBalancePDF = function downloadTrialBalancePDF() {
   doc.save("trial-balance.pdf");
 };
 
+window.downloadProfitLossPDF = function downloadProfitLossPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF library not loaded.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  // Theme colors (orange / black / light gray)
+  const COLOR_BLACK = [20, 20, 20];
+  const COLOR_ORANGE = [245, 124, 0];
+  const COLOR_GRAY = [110, 110, 110];
+  const COLOR_LIGHT = [248, 248, 248];
+  const COLOR_BORDER = [225, 225, 225];
+
+  // Report texts
+  const companyName = "Exodia Services Inc.";
+  const reportTitle = "Statement of Profit and Loss";
+  const generatedOn = new Date().toLocaleString();
+
+  let subtitle = "For the selected reporting period";
+  if (filterFrom && filterTo) subtitle = `For the period ${filterFrom} to ${filterTo}`;
+  else if (filterFrom) subtitle = `From ${filterFrom}`;
+  else if (filterTo) subtitle = `Up to ${filterTo}`;
+
+  // -----------------------------
+  // Recompute P&L data safely
+  // -----------------------------
+  const filteredLines = lines
+    .filter((l) => !l.is_deleted)
+    .filter((l) => {
+      const d = String(l.entry_date || "");
+      if (filterFrom && d < filterFrom) return false;
+      if (filterTo && d > filterTo) return false;
+      return true;
+    });
+
+  const revenueAccounts = COA
+    .filter((a) => normalizeAccountType(a.type) === "Revenue")
+    .sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+  const expenseAccounts = COA
+    .filter((a) => normalizeAccountType(a.type) === "Expense");
+
+  const bodyRows = [];
+  let totalRevenue = 0;
+  let totalExpense = 0;
+
+  // Revenue section
+  bodyRows.push([
+    { content: "Revenue", colSpan: 2, styles: { fontStyle: "bold", fillColor: COLOR_LIGHT, textColor: COLOR_BLACK } }
+  ]);
+
+  revenueAccounts.forEach((acct) => {
+    const acctId = acct.id;
+    const total = filteredLines
+      .filter((l) => (l.resolvedAccountId || l.accountId) === acctId)
+      .reduce((sum, l) => sum + (num(l.credit) - num(l.debit)), 0);
+
+    totalRevenue += total;
+
+    bodyRows.push([
+      acct.name || "",
+      money(Math.abs(total) < 0.00001 ? 0 : total)
+    ]);
+  });
+
+  bodyRows.push([
+    { content: "Total Revenue", styles: { fontStyle: "bold" } },
+    { content: money(Math.abs(totalRevenue) < 0.00001 ? 0 : totalRevenue), styles: { fontStyle: "bold", halign: "right" } }
+  ]);
+
+  // Expenses section
+  bodyRows.push([
+    { content: "Expenses", colSpan: 2, styles: { fontStyle: "bold", fillColor: COLOR_LIGHT, textColor: COLOR_BLACK } }
+  ]);
+
+  const departmentGroups = {};
+  const companyItems = [];
+
+  expenseAccounts.forEach((acct) => {
+    const rawName = String(acct.name || "").trim();
+    const acctId = acct.id;
+
+    const acctTotal = filteredLines
+      .filter((l) => (l.resolvedAccountId || l.accountId) === acctId)
+      .reduce((sum, l) => sum + (num(l.debit) - num(l.credit)), 0);
+
+    if (isDepartmentExpenseName(rawName)) {
+      const groupName = getDepartmentExpenseGroupName(rawName);
+
+      if (!departmentGroups[groupName]) {
+        departmentGroups[groupName] = {
+          total: 0,
+          items: []
+        };
+      }
+
+      departmentGroups[groupName].total += acctTotal;
+      departmentGroups[groupName].items.push({
+        name: rawName,
+        departmentLabel: getDepartmentLabelFromAccountName(rawName),
+        total: acctTotal
+      });
+    } else {
+      companyItems.push({
+        name: rawName,
+        total: acctTotal,
+        code: acct.code || ""
+      });
+    }
+  });
+
+  const orderedDepartmentGroups = Object.keys(departmentGroups).sort((a, b) => {
+    return getDepartmentExpenseGroupOrder(a) - getDepartmentExpenseGroupOrder(b);
+  });
+
+  orderedDepartmentGroups.forEach((groupName) => {
+    const grp = departmentGroups[groupName];
+    totalExpense += grp.total;
+
+    bodyRows.push([
+      `  ${groupName}`,
+      money(Math.abs(grp.total) < 0.00001 ? 0 : grp.total)
+    ]);
+
+    grp.items
+      .sort((a, b) => a.departmentLabel.localeCompare(b.departmentLabel))
+      .forEach((item) => {
+        bodyRows.push([
+          `      ${item.departmentLabel}`,
+          money(Math.abs(item.total) < 0.00001 ? 0 : item.total)
+        ]);
+      });
+  });
+
+  if (companyItems.length > 0) {
+    bodyRows.push([
+      { content: "Company Expenses", colSpan: 2, styles: { fontStyle: "bold", fillColor: [252, 252, 252], textColor: COLOR_BLACK } }
+    ]);
+
+    companyItems
+      .sort((a, b) => {
+        const oa = getCompanyExpenseOrder(a.name);
+        const ob = getCompanyExpenseOrder(b.name);
+        if (oa !== ob) return oa - ob;
+        return a.name.localeCompare(b.name);
+      })
+      .forEach((item) => {
+        totalExpense += item.total;
+
+        bodyRows.push([
+          item.name,
+          money(Math.abs(item.total) < 0.00001 ? 0 : item.total)
+        ]);
+      });
+  }
+
+  bodyRows.push([
+    { content: "Total Expenses", styles: { fontStyle: "bold" } },
+    { content: money(Math.abs(totalExpense) < 0.00001 ? 0 : totalExpense), styles: { fontStyle: "bold", halign: "right" } }
+  ]);
+
+  const net = totalRevenue - totalExpense;
+
+  // -----------------------------
+  // Header design
+  // -----------------------------
+  doc.setFillColor(...COLOR_BLACK);
+  doc.rect(0, 0, pageWidth, 18, "F");
+
+  doc.setFillColor(...COLOR_ORANGE);
+  doc.rect(0, 18, pageWidth, 5, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(companyName, 14, 12);
+
+  doc.setTextColor(...COLOR_BLACK);
+  doc.setFontSize(17);
+  doc.text(reportTitle, 14, 34);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_GRAY);
+  doc.text(subtitle, 14, 40);
+
+  // -----------------------------
+  // Information box
+  // -----------------------------
+  doc.setFillColor(...COLOR_LIGHT);
+  doc.roundedRect(14, 46, pageWidth - 28, 30, 3, 3, "F");
+
+  doc.setDrawColor(...COLOR_ORANGE);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14, 46, pageWidth - 28, 30, 3, 3, "S");
+
+  doc.setTextColor(...COLOR_BLACK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Report Information", 18, 53);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(`Document: ${reportTitle}`, 18, 59);
+  doc.text(`Prepared for: Internal Financial Review`, 18, 64);
+  doc.text(`Generated on: ${generatedOn}`, 18, 69);
+
+  // -----------------------------
+  // Table
+  // -----------------------------
+  doc.autoTable({
+    startY: 84,
+    head: [["Particulars", "Amount"]],
+    body: bodyRows,
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 9,
+      cellPadding: 3.5,
+      textColor: COLOR_BLACK,
+      lineColor: COLOR_BORDER,
+      lineWidth: 0.2
+    },
+    headStyles: {
+      fillColor: COLOR_BLACK,
+      textColor: [255, 255, 255],
+      fontStyle: "bold"
+    },
+    columnStyles: {
+      0: { halign: "left", cellWidth: 125 },
+      1: { halign: "right", cellWidth: 55 }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY || 100;
+
+  // -----------------------------
+  // Net income / loss highlight box
+  // -----------------------------
+  doc.setFillColor(...COLOR_ORANGE);
+  doc.roundedRect(14, finalY + 8, pageWidth - 28, 14, 2, 2, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Net Profit / Loss", 18, finalY + 17);
+
+  doc.text(
+    money(Math.abs(net) < 0.00001 ? 0 : net),
+    pageWidth - 18,
+    finalY + 17,
+    { align: "right" }
+  );
+
+  // -----------------------------
+  // Footer note
+  // -----------------------------
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...COLOR_GRAY);
+  doc.text(
+    "This report was generated from the Exodia Ledger system for internal use.",
+    14,
+    pageHeight - 10
+  );
+
+  doc.save("statement-of-profit-and-loss.pdf");
+};
+
 // ==============================
 // Init after login
 // ==============================
