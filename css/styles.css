@@ -1021,14 +1021,18 @@ JOURNAL STATUS MESSAGE
   margin-top: 14px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #fff7f1;
+  background: #fff8f1;
   border: 1px solid #f3d3bc;
-  color: #8a420c;
+  color: #9a3412;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.4;
   display: inline-block;
-  min-width: 280px;
+  max-width: 520px;
+}
+
+.je-status:empty{
+  display: none;
 }
 
 /* Required fields highlight */
