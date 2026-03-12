@@ -1860,7 +1860,7 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
 
   let logoData = null;
   try {
-    logoData = await loadImageAsDataURL("./img/exodia-logo-wordmark.png");
+    logoData = await loadImageAsDataURL("./exodia-icon.png");
   } catch (e) {
     console.warn("Logo failed to load:", e);
   }
@@ -2072,18 +2072,18 @@ window.downloadProfitLossPDF = async function downloadProfitLossPDF() {
   doc.rect(0, 34, pageWidth, 4, "F");
 
   if (logoData) {
-const logoWidth = 70;
-const logoHeight = 16;
-const logoX = (pageWidth - logoWidth) / 2;
-const logoY = 6;
+  const logoWidth = 28;
+  const logoHeight = 20;
+  const logoX = (pageWidth - logoWidth) / 2;
+  const logoY = 6;
 
-doc.addImage(logoData, "PNG", logoX, logoY, logoWidth, logoHeight);
-  } else {
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text(companyName, 14, 14);
-  }
+  doc.addImage(logoData, "PNG", logoX, logoY, logoWidth, logoHeight);
+} else {
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(companyName, 14, 18);
+}
 
   // Title
   doc.setTextColor(...COLOR_BLACK);
