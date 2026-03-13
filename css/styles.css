@@ -1256,3 +1256,7 @@ JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
   color: #555;
 }
 
+#journal-history tbody td:nth-child(1){
+  font-weight:600;
+}
+
