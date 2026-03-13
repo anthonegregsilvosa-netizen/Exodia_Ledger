@@ -1518,7 +1518,7 @@ function renderProfitAndLoss() {
     .filter((a) => normalizeAccountType(a.type) === "Revenue")
     .sort((a, b) => {
       const ca = codeNum(a.code);
-      const cb = codeNum(b.code);
+      const cb = codeNum(b.codex1);
       if (ca !== cb) return ca - cb;
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
@@ -1714,15 +1714,15 @@ function renderStatementOfFinancialPosition() {
   let totalLiabilities = 0;
   let totalEquity = 0;
 
-  const addSectionHeader = (label) => {
+  function addSectionRow(title) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td colspan="3" style="font-weight:bold; background:#f5f5f5;">${esc(label)}</td>
+      <td colspan="3" style="font-weight:bold; background:#f5f5f5;">${esc(title)}</td>
     `;
     tbody.appendChild(tr);
-  };
+  }
 
-  const addAccountRow = (acct, amount) => {
+  function addAccountRow(acct, amount) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${esc(acct.code || "")}</td>
@@ -1730,19 +1730,18 @@ function renderStatementOfFinancialPosition() {
       <td style="text-align:right;">${money(amount)}</td>
     `;
     tbody.appendChild(tr);
-  };
+  }
 
-  const addTotalRow = (label, amount) => {
+  function addTotalRow(title, amount) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td colspan="2"><b>${esc(label)}</b></td>
+      <td colspan="2"><b>${esc(title)}</b></td>
       <td style="text-align:right;"><b>${money(amount)}</b></td>
     `;
     tbody.appendChild(tr);
-  };
+  }
 
-  // ASSETS
-  addSectionHeader("Assets");
+  addSectionRow("Assets");
   assetAccounts.forEach((acct) => {
     const bal = balances[acct.id] || 0;
     if (Math.abs(bal) < 0.00001) return;
@@ -1751,8 +1750,7 @@ function renderStatementOfFinancialPosition() {
   });
   addTotalRow("Total Assets", totalAssets);
 
-  // LIABILITIES
-  addSectionHeader("Liabilities");
+  addSectionRow("Liabilities");
   liabilityAccounts.forEach((acct) => {
     const bal = balances[acct.id] || 0;
     if (Math.abs(bal) < 0.00001) return;
@@ -1761,8 +1759,7 @@ function renderStatementOfFinancialPosition() {
   });
   addTotalRow("Total Liabilities", totalLiabilities);
 
-  // EQUITY
-  addSectionHeader("Equity");
+  addSectionRow("Equity");
   equityAccounts.forEach((acct) => {
     const bal = balances[acct.id] || 0;
     if (Math.abs(bal) < 0.00001) return;
@@ -1771,7 +1768,6 @@ function renderStatementOfFinancialPosition() {
   });
   addTotalRow("Total Equity", totalEquity);
 
-  // TOTAL LIAB + EQUITY
   addTotalRow("Total Liabilities and Equity", totalLiabilities + totalEquity);
 }
 
