@@ -695,14 +695,17 @@ window.showWorksheet = function (view) {
   const trial = $("ws-trial");
   const pl = $("ws-pl");
   const sfp = $("ws-sfp");
+  const frs = $("ws-frs");
 
   if (trial) trial.style.display = (view === "trial") ? "block" : "none";
   if (pl) pl.style.display = (view === "pl") ? "block" : "none";
   if (sfp) sfp.style.display = (view === "sfp") ? "block" : "none";
+  if (frs) frs.style.display = (view === "frs") ? "block" : "none";
 
   if (view === "trial") renderTrialBalance();
   if (view === "pl") renderProfitAndLoss();
   if (view === "sfp") renderStatementOfFinancialPosition();
+  if (view === "frs") renderFinancialReportSummary();
 };
 
 // ==============================
@@ -1424,6 +1427,35 @@ function getCompanyExpenseOrder(name) {
   return idx === -1 ? 999 : idx;
 }
 
+function getYearFromDate(dateStr) {
+  if (!dateStr) return "";
+  return String(dateStr).slice(0, 4);
+}
+
+function computeBalancesForYear(year) {
+  const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
+  const balances = {};
+
+  lines
+    .filter((l) => !l.is_deleted)
+    .filter((l) => {
+      const lineYear = getYearFromDate(l.entry_date);
+      return String(lineYear) === String(year);
+    })
+    .forEach((l) => {
+      const key = l.resolvedAccountId || l.accountId;
+      const normal = normals[key] || "Debit";
+      const delta =
+        normal === "Credit"
+          ? num(l.credit) - num(l.debit)
+          : num(l.debit) - num(l.credit);
+
+      balances[key] = (balances[key] || 0) + delta;
+    });
+
+  return balances;
+}
+
 // ==============================
 // Trial Balance
 // ==============================
@@ -1768,6 +1800,93 @@ equityAccounts.forEach((acct) => {
   addTotalRow("Total Equity", totalEquity);
 
   addTotalRow("Total Liabilities and Equity", totalLiabilities + totalEquity);
+}
+
+function renderFinancialReportSummary() {
+  const head = $("frs-head");
+  const body = $("frs-body");
+  if (!head || !body) return;
+
+  const y1 = ($("frs-year-1")?.value || "").trim();
+  const y2 = ($("frs-year-2")?.value || "").trim();
+  const y3 = ($("frs-year-3")?.value || "").trim();
+
+  const years = [y1, y2, y3].filter(Boolean);
+
+  if (years.length === 0) {
+    const currentYear = new Date().getFullYear();
+    if ($("frs-year-1")) $("frs-year-1").value = currentYear;
+    years.push(String(currentYear));
+  }
+
+  const balancesByYear = {};
+  years.forEach((yr) => {
+    balancesByYear[yr] = computeBalancesForYear(yr);
+  });
+
+  head.innerHTML = `
+    <tr>
+      <th style="text-align:left;">Code</th>
+      <th style="text-align:left;">Account Name</th>
+      ${years.map((yr) => `<th style="text-align:right;">${esc(yr)}</th>`).join("")}
+    </tr>
+  `;
+
+  body.innerHTML = "";
+
+  const sections = [
+    { title: "Assets", type: "Asset" },
+    { title: "Liabilities", type: "Liability" },
+    { title: "Equity", type: "Equity" },
+    { title: "Revenue", type: "Revenue" },
+    { title: "Expenses", type: "Expense" }
+  ];
+
+  sections.forEach((section) => {
+    const accounts = COA
+      .filter((a) => normalizeAccountType(a.type) === section.type)
+      .sort((a, b) => {
+        const ca = codeNum(a.code);
+        const cb = codeNum(b.code);
+        if (ca !== cb) return ca - cb;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+
+    const sectionRow = document.createElement("tr");
+    sectionRow.innerHTML = `
+      <td colspan="${2 + years.length}" style="font-weight:bold; background:#f5f5f5;">
+        ${esc(section.title)}
+      </td>
+    `;
+    body.appendChild(sectionRow);
+
+    const totals = {};
+    years.forEach((yr) => totals[yr] = 0);
+
+    accounts.forEach((acct) => {
+      const rowVals = years.map((yr) => {
+        const bal = balancesByYear[yr][acct.id] || 0;
+        totals[yr] += bal;
+        return bal;
+      });
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${esc(acct.code || "")}</td>
+        <td>${esc(acct.name || "")}</td>
+        ${rowVals.map((v) => `<td style="text-align:right;">${money(v)}</td>`).join("")}
+      `;
+      body.appendChild(tr);
+    });
+
+    const totalRow = document.createElement("tr");
+    totalRow.innerHTML = `
+      <td></td>
+      <td><b>Total ${esc(section.title)}</b></td>
+      ${years.map((yr) => `<td style="text-align:right;"><b>${money(totals[yr])}</b></td>`).join("")}
+    `;
+    body.appendChild(totalRow);
+  });
 }
 
 window.downloadTrialBalancePDF = function downloadTrialBalancePDF() {
@@ -2539,6 +2658,164 @@ doc.text(
 );
 
   doc.save("statement-of-financial-position.pdf");
+};
+
+window.downloadFinancialReportSummaryPDF = async function downloadFinancialReportSummaryPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF library not loaded.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("l", "mm", "a4");
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  let logoData = null;
+  try {
+    logoData = await loadImageAsDataURL("./img/exodia-logo.png");
+  } catch (e) {
+    console.warn("Logo failed to load:", e);
+  }
+
+  const COLOR_BLACK = [20, 20, 20];
+  const COLOR_ORANGE = [245, 124, 0];
+  const COLOR_GRAY = [110, 110, 110];
+  const COLOR_LIGHT = [248, 248, 248];
+  const COLOR_BORDER = [225, 225, 225];
+
+  const reportTitle = "Financial Report Summary";
+  const generatedOn = new Date().toLocaleString();
+
+  const y1 = ($("frs-year-1")?.value || "").trim();
+  const y2 = ($("frs-year-2")?.value || "").trim();
+  const y3 = ($("frs-year-3")?.value || "").trim();
+  const years = [y1, y2, y3].filter(Boolean);
+
+  if (years.length === 0) years.push(String(new Date().getFullYear()));
+
+  const balancesByYear = {};
+  years.forEach((yr) => {
+    balancesByYear[yr] = computeBalancesForYear(yr);
+  });
+
+  // header
+  doc.setFillColor(...COLOR_BLACK);
+  doc.rect(0, 0, pageWidth, 28, "F");
+
+  doc.setFillColor(...COLOR_ORANGE);
+  doc.rect(0, 28, pageWidth, 4, "F");
+
+  if (logoData) {
+    doc.addImage(logoData, "PNG", (pageWidth - 90) / 2, 4, 90, 18);
+  }
+
+  doc.setTextColor(...COLOR_BLACK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(reportTitle, pageWidth / 2, 42, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_GRAY);
+  doc.text(`Years: ${years.join(", ")}`, pageWidth / 2, 49, { align: "center" });
+  doc.text(`Generated on: ${generatedOn}`, pageWidth / 2, 55, { align: "center" });
+
+  const rows = [];
+  const sections = [
+    { title: "Assets", type: "Asset" },
+    { title: "Liabilities", type: "Liability" },
+    { title: "Equity", type: "Equity" },
+    { title: "Revenue", type: "Revenue" },
+    { title: "Expenses", type: "Expense" }
+  ];
+
+  sections.forEach((section) => {
+    rows.push([
+      {
+        content: section.title,
+        colSpan: 2 + years.length,
+        styles: {
+          fontStyle: "bold",
+          fillColor: COLOR_LIGHT,
+          textColor: COLOR_BLACK
+        }
+      }
+    ]);
+
+    const accounts = COA
+      .filter((a) => normalizeAccountType(a.type) === section.type)
+      .sort((a, b) => {
+        const ca = codeNum(a.code);
+        const cb = codeNum(b.code);
+        if (ca !== cb) return ca - cb;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+
+    const totals = {};
+    years.forEach((yr) => totals[yr] = 0);
+
+    accounts.forEach((acct) => {
+      const vals = years.map((yr) => {
+        const bal = balancesByYear[yr][acct.id] || 0;
+        totals[yr] += bal;
+        return money(bal);
+      });
+
+      rows.push([
+        acct.code || "",
+        acct.name || "",
+        ...vals
+      ]);
+    });
+
+    rows.push([
+      "",
+      `Total ${section.title}`,
+      ...years.map((yr) => money(totals[yr]))
+    ]);
+  });
+
+  doc.autoTable({
+    startY: 65,
+    head: [[
+      "Code",
+      "Account Name",
+      ...years
+    ]],
+    body: rows,
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 8.5,
+      cellPadding: 3,
+      textColor: COLOR_BLACK,
+      lineColor: COLOR_BORDER,
+      lineWidth: 0.2
+    },
+    headStyles: {
+      fillColor: COLOR_BLACK,
+      textColor: [255, 255, 255],
+      fontStyle: "bold"
+    },
+    columnStyles: {
+      0: { halign: "left", cellWidth: 22 },
+      1: { halign: "left", cellWidth: 90 }
+    },
+    margin: { left: 10, right: 10 }
+  });
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(...COLOR_GRAY);
+  doc.text(
+    "This report was generated from the Exodia Ledger system for internal use.",
+    10,
+    pageHeight - 8
+  );
+
+  doc.save("financial-report-summary.pdf");
 };
 
 // ==============================
