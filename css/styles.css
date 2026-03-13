@@ -1042,33 +1042,29 @@ textarea:required:invalid{
   background:#fff7f7;
 }
 
-input:required:invalid:focus{
-  border:2px solid #ff0000;
-  box-shadow:0 0 0 3px rgba(255,0,0,0.15);
-}
-
 /* =========================
-JOURNAL HISTORY
+JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
 ========================= */
 
 #journal-history{
-  padding: 24px;
+  padding: 20px;
   width: 100%;
-  max-width: 1300px;
+  max-width: 1350px;
   margin: auto;
 }
 
 #journal-history h2{
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 38px;
+  font-size: 34px;
   font-weight: 700;
-  margin: 6px 0 22px;
+  margin: 6px 0 18px;
   color: #181818;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
 }
 
 #journal-history table{
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: #ffffff;
   border: 1px solid #f0ddd0;
@@ -1080,22 +1076,28 @@ JOURNAL HISTORY
 #journal-history thead th{
   background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
   color: #ffffff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   text-align: center;
-  padding: 14px 10px;
+  padding: 12px 8px;
   border-bottom: 2px solid #ff7a1a;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 #journal-history tbody td{
-  font-size: 14px;
+  font-size: 13px;
   color: #222;
-  padding: 14px 10px;
+  padding: 12px 8px;
   border-bottom: 1px solid #f3e2d5;
   vertical-align: top;
-  line-height: 1.45;
+  line-height: 1.4;
   background: #fff;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 #journal-history tbody tr:nth-child(even) td{
@@ -1106,25 +1108,31 @@ JOURNAL HISTORY
   background: #fff1e6;
 }
 
+#journal-history thead th:nth-child(1),
+#journal-history thead th:nth-child(2),
+#journal-history thead th:nth-child(3),
 #journal-history tbody td:nth-child(1),
 #journal-history tbody td:nth-child(2),
 #journal-history tbody td:nth-child(3){
-  white-space: nowrap;
+  font-size: 12px;
 }
 
+#journal-history thead th:last-child,
 #journal-history tbody td:last-child{
+  width: 72px;
   text-align: center;
   vertical-align: middle;
 }
 
 #journal-history button{
-  padding: 8px 14px;
+  padding: 7px 12px;
   border: 1px solid #f0c3a1;
   background: #fff4eb;
   color: #8a420c;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
+  font-size: 13px;
   transition: all 0.18s ease;
 }
 
@@ -1140,3 +1148,111 @@ JOURNAL HISTORY
   font-weight: 600;
   color: #555;
 }
+
+/* =========================
+JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
+========================= */
+
+#journal-history{
+  padding: 20px;
+  width: 100%;
+  max-width: 1350px;
+  margin: auto;
+}
+
+#journal-history h2{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 700;
+  margin: 6px 0 18px;
+  color: #181818;
+  letter-spacing: -0.4px;
+}
+
+#journal-history table{
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #f0ddd0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+}
+
+#journal-history thead th{
+  background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  padding: 12px 8px;
+  border-bottom: 2px solid #ff7a1a;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+#journal-history tbody td{
+  font-size: 13px;
+  color: #222;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f3e2d5;
+  vertical-align: top;
+  line-height: 1.4;
+  background: #fff;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#journal-history tbody tr:nth-child(even) td{
+  background: #fffaf6;
+}
+
+#journal-history tbody tr:hover td{
+  background: #fff1e6;
+}
+
+#journal-history thead th:nth-child(1),
+#journal-history thead th:nth-child(2),
+#journal-history thead th:nth-child(3),
+#journal-history tbody td:nth-child(1),
+#journal-history tbody td:nth-child(2),
+#journal-history tbody td:nth-child(3){
+  font-size: 12px;
+}
+
+#journal-history thead th:last-child,
+#journal-history tbody td:last-child{
+  width: 72px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#journal-history button{
+  padding: 7px 12px;
+  border: 1px solid #f0c3a1;
+  background: #fff4eb;
+  color: #8a420c;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.18s ease;
+}
+
+#journal-history button:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #fff;
+}
+
+#history-status{
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+}
+
