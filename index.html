@@ -303,37 +303,58 @@
 </div>
 
   <!-- Statement of Financial Position -->
-<div id="ws-frs" style="display:none;">
-  <h3>Financial Report Summary</h3>
+  <div id="ws-sfp" style="display:none;">
+    <h3>Statement of Financial Position</h3>
 
-  <div style="margin:10px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-    <label>
-      Year 1
-      <input type="number" id="frs-year-1" placeholder="2024" style="width:100px;">
-    </label>
+    <div style="margin:10px 0;">
+      <button class="btn primary" onclick="downloadStatementOfFinancialPositionPDF()">Download PDF</button>
+    </div>
 
-    <label>
-      Year 2
-      <input type="number" id="frs-year-2" placeholder="2023" style="width:100px;">
-    </label>
-
-    <label>
-      Year 3
-      <input type="number" id="frs-year-3" placeholder="2022" style="width:100px;">
-    </label>
-
-    <button class="btn" onclick="renderFinancialReportSummary()">Apply Years</button>
-    <button class="btn primary" onclick="downloadFinancialReportSummaryPDF()">Download PDF</button>
+    <table border="1" cellpadding="6" style="max-width:700px; width:100%;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Code</th>
+          <th style="text-align:left;">Account Name</th>
+          <th style="text-align:right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="sfp-body"></tbody>
+    </table>
   </div>
 
-  <table border="1" cellpadding="6" style="width:100%;">
-    <thead id="frs-head"></thead>
-    <tbody id="frs-body"></tbody>
-  </table>
-</div>
+  <!-- Financial Report Summary -->
+  <div id="ws-frs" style="display:none;">
+    <h3>Financial Report Summary</h3>
 
-  <!-- ========================= HISTORY ========================= -->
-  <section id="journal-history" style="display:none;">
+    <div style="margin:10px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <label>
+        Year 1
+        <input type="number" id="frs-year-1" placeholder="2024" style="width:100px;">
+      </label>
+
+      <label>
+        Year 2
+        <input type="number" id="frs-year-2" placeholder="2023" style="width:100px;">
+      </label>
+
+      <label>
+        Year 3
+        <input type="number" id="frs-year-3" placeholder="2022" style="width:100px;">
+      </label>
+
+      <button class="btn" onclick="renderFinancialReportSummary()">Apply Years</button>
+      <button class="btn primary" onclick="downloadFinancialReportSummaryPDF()">Download PDF</button>
+    </div>
+
+    <table border="1" cellpadding="6" style="width:100%;">
+      <thead id="frs-head"></thead>
+      <tbody id="frs-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========================= HISTORY ========================= -->
+<section id="journal-history" style="display:none;">
     <h2>Journal History</h2>
 
     <table border="1" cellpadding="6">
