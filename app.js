@@ -2231,6 +2231,305 @@ if (subtitle) {
   doc.save("statement-of-profit-and-loss.pdf");
 };
 
+window.downloadStatementOfFinancialPositionPDF = async function downloadStatementOfFinancialPositionPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("PDF library not loaded.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  let logoData = null;
+  try {
+    logoData = await loadImageAsDataURL("./img/exodia-logo.png");
+  } catch (e) {
+    console.warn("Logo failed to load:", e);
+  }
+
+  const COLOR_BLACK = [20, 20, 20];
+  const COLOR_ORANGE = [245, 124, 0];
+  const COLOR_GRAY = [110, 110, 110];
+  const COLOR_LIGHT = [248, 248, 248];
+  const COLOR_BORDER = [225, 225, 225];
+
+  const companyName = "Exodia Gaming Development Inc.";
+  const reportTitle = "Statement of Financial Position";
+  const generatedOn = new Date().toLocaleString();
+
+  function formatDatePretty(d) {
+    if (!d) return "";
+    const date = new Date(d);
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  }
+
+  let subtitle = "";
+  if (filterFrom && filterTo) {
+    subtitle = `As of ${formatDatePretty(filterTo)}`;
+  } else if (filterTo) {
+    subtitle = `As of ${formatDatePretty(filterTo)}`;
+  } else if (filterFrom) {
+    subtitle = `From ${formatDatePretty(filterFrom)}`;
+  } else {
+    subtitle = "As of current filtered balances";
+  }
+
+  const balances = computeBalances();
+
+  const assetAccounts = COA
+    .filter((a) => normalizeAccountType(a.type) === "Asset")
+    .sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+  const liabilityAccounts = COA
+    .filter((a) => normalizeAccountType(a.type) === "Liability")
+    .sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+  const equityAccounts = COA
+    .filter((a) => normalizeAccountType(a.type) === "Equity")
+    .sort((a, b) => {
+      const ca = codeNum(a.code);
+      const cb = codeNum(b.code);
+      if (ca !== cb) return ca - cb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+
+  const bodyRows = [];
+  let totalAssets = 0;
+  let totalLiabilities = 0;
+  let totalEquity = 0;
+
+  bodyRows.push([
+    {
+      content: "Assets",
+      colSpan: 3,
+      styles: {
+        fontStyle: "bold",
+        fillColor: COLOR_LIGHT,
+        textColor: COLOR_BLACK
+      }
+    }
+  ]);
+
+  assetAccounts.forEach((acct) => {
+    const bal = balances[acct.id] || 0;
+    totalAssets += bal;
+
+    bodyRows.push([
+      acct.code || "",
+      acct.name || "",
+      money(bal)
+    ]);
+  });
+
+  bodyRows.push([
+    { content: "", styles: { fontStyle: "bold" } },
+    { content: "Total Assets", styles: { fontStyle: "bold" } },
+    {
+      content: money(totalAssets),
+      styles: { fontStyle: "bold", halign: "right" }
+    }
+  ]);
+
+  bodyRows.push([
+    {
+      content: "Liabilities",
+      colSpan: 3,
+      styles: {
+        fontStyle: "bold",
+        fillColor: COLOR_LIGHT,
+        textColor: COLOR_BLACK
+      }
+    }
+  ]);
+
+  liabilityAccounts.forEach((acct) => {
+    const bal = balances[acct.id] || 0;
+    totalLiabilities += bal;
+
+    bodyRows.push([
+      acct.code || "",
+      acct.name || "",
+      money(bal)
+    ]);
+  });
+
+  bodyRows.push([
+    { content: "", styles: { fontStyle: "bold" } },
+    { content: "Total Liabilities", styles: { fontStyle: "bold" } },
+    {
+      content: money(totalLiabilities),
+      styles: { fontStyle: "bold", halign: "right" }
+    }
+  ]);
+
+  bodyRows.push([
+    {
+      content: "Equity",
+      colSpan: 3,
+      styles: {
+        fontStyle: "bold",
+        fillColor: COLOR_LIGHT,
+        textColor: COLOR_BLACK
+      }
+    }
+  ]);
+
+  equityAccounts.forEach((acct) => {
+    const bal = balances[acct.id] || 0;
+    totalEquity += bal;
+
+    bodyRows.push([
+      acct.code || "",
+      acct.name || "",
+      money(bal)
+    ]);
+  });
+
+  bodyRows.push([
+    { content: "", styles: { fontStyle: "bold" } },
+    { content: "Total Equity", styles: { fontStyle: "bold" } },
+    {
+      content: money(totalEquity),
+      styles: { fontStyle: "bold", halign: "right" }
+    }
+  ]);
+
+  bodyRows.push([
+    { content: "", styles: { fontStyle: "bold" } },
+    { content: "Total Liabilities and Equity", styles: { fontStyle: "bold" } },
+    {
+      content: money(totalLiabilities + totalEquity),
+      styles: { fontStyle: "bold", halign: "right" }
+    }
+  ]);
+
+  // Header
+  doc.setFillColor(...COLOR_BLACK);
+  doc.rect(0, 0, pageWidth, 34, "F");
+
+  doc.setFillColor(...COLOR_ORANGE);
+  doc.rect(0, 34, pageWidth, 4, "F");
+
+  if (logoData) {
+    const logoWidth = 120;
+    const logoHeight = 24;
+    const logoX = (pageWidth - logoWidth) / 2;
+    const logoY = 5;
+
+    doc.addImage(logoData, "PNG", logoX, logoY, logoWidth, logoHeight);
+  } else {
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text(companyName, pageWidth / 2, 20, { align: "center" });
+  }
+
+  // Title
+  doc.setTextColor(...COLOR_BLACK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.text(reportTitle, pageWidth / 2, 46, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...COLOR_GRAY);
+  if (subtitle) {
+    doc.text(subtitle, pageWidth / 2, 56, { align: "center" });
+  }
+
+  // Information box
+  doc.setFillColor(...COLOR_LIGHT);
+  doc.roundedRect(14, 64, pageWidth - 28, 32, 3, 3, "F");
+
+  doc.setDrawColor(...COLOR_ORANGE);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14, 64, pageWidth - 28, 32, 3, 3, "S");
+
+  doc.setTextColor(...COLOR_BLACK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Report Information", 18, 71);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(`Document: ${reportTitle}`, 18, 76);
+  doc.text(`Prepared for: Internal Management Reporting`, 18, 81);
+  doc.text(`Generated on: ${generatedOn}`, 18, 86);
+  doc.text(`Source: Exodia Ledger System`, 18, 91);
+
+  // Table
+  doc.autoTable({
+    startY: 102,
+    head: [["Code", "Account Name", "Amount"]],
+    body: bodyRows,
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 9,
+      cellPadding: 3.5,
+      textColor: COLOR_BLACK,
+      lineColor: COLOR_BORDER,
+      lineWidth: 0.2
+    },
+    headStyles: {
+      fillColor: COLOR_BLACK,
+      textColor: [255, 255, 255],
+      fontStyle: "bold"
+    },
+    columnStyles: {
+      0: { halign: "left", cellWidth: 28 },
+      1: { halign: "left", cellWidth: 97 },
+      2: { halign: "right", cellWidth: 55 }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  const finalY = doc.lastAutoTable.finalY || 100;
+
+  doc.setFillColor(...COLOR_ORANGE);
+  doc.roundedRect(14, finalY + 8, pageWidth - 28, 14, 2, 2, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Total Liabilities and Equity", 18, finalY + 17);
+
+  doc.text(
+    money(totalLiabilities + totalEquity),
+    pageWidth - 18,
+    finalY + 17,
+    { align: "right" }
+  );
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...COLOR_GRAY);
+  doc.text(
+    "This report was generated from the Exodia Ledger system for internal use.",
+    14,
+    pageHeight - 10
+  );
+
+  doc.save("statement-of-financial-position.pdf");
+};
+
 // ==============================
 // Init after login
 // ==============================
