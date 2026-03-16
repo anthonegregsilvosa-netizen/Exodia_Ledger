@@ -1216,6 +1216,33 @@ tr.innerHTML = `
 // ==============================
 // Compute balances
 // ==============================
+
+function computeBalances() {
+  const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
+  const balances = {};
+
+  lines
+    .filter((l) => !l.is_deleted)
+    .filter((l) => {
+      const d = String(l.entry_date || "");
+      if (filterFrom && d < filterFrom) return false;
+      if (filterTo && d > filterTo) return false;
+      return true;
+    })
+    .forEach((l) => {
+      const key = l.resolvedAccountId || l.accountId;
+      const normal = normals[key] || "Debit";
+      const delta =
+        normal === "Credit"
+          ? num(l.credit) - num(l.debit)
+          : num(l.debit) - num(l.credit);
+
+      balances[key] = (balances[key] || 0) + delta;
+    });
+
+  return balances;
+}
+
 function computeBalancesAsOf(endDate) {
   const normals = Object.fromEntries(COA.map((a) => [a.id, a.normal]));
   const balances = {};
@@ -1716,7 +1743,7 @@ function renderStatementOfFinancialPosition() {
 
   tbody.innerHTML = "";
 
-  const balances = computeBalances();
+  const balances = computeBalancesAsOf(filterTo || "");
 
   const assetAccounts = COA
     .filter((a) => normalizeAccountType(a.type) === "Asset")
@@ -1916,7 +1943,7 @@ window.downloadTrialBalancePDF = function downloadTrialBalancePDF() {
   doc.setFontSize(10);
   doc.text(subtitle, 14, 25);
   
-  const balances = computeBalances();
+  const balances = computeBalancesAsOf(filterTo || "");
   const typeOrder = { Asset: 1, Liability: 2, Equity: 3, Revenue: 4, Expense: 5 };
 
   const list = [...COA].sort((a, b) => {
@@ -2408,7 +2435,7 @@ window.downloadStatementOfFinancialPositionPDF = async function downloadStatemen
     subtitle = "As of current filtered balances";
   }
 
-  const balances = computeBalances();
+  const balances = computeBalancesAsOf(filterTo || "");
 
   const assetAccounts = COA
     .filter((a) => normalizeAccountType(a.type) === "Asset")
