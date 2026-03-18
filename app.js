@@ -2985,8 +2985,7 @@ async function initAppAfterLogin() {
   worksheetFilterFrom = localStorage.getItem(WORKSHEET_FILTER_FROM_KEY) || "";
   worksheetFilterTo = localStorage.getItem(WORKSHEET_FILTER_TO_KEY) || "";
 
-  if ($("filter-from")) $("filter-from").value = "";
-  if ($("filter-to")) $("filter-to").value = "";
+  loadCurrentViewDateInputs(); "";
 
  const lastView =
   sessionStorage.getItem(TAB_VIEW_KEY) ||
