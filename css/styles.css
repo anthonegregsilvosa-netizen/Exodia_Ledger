@@ -1050,11 +1050,11 @@ JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
 }
 
 /* =========================
-GENERAL LEDGER - PREMIUM CLEAN
+GENERAL LEDGER - FINAL FIT
 ========================= */
 
 #ledger{
-  padding: 24px 16px;
+  padding: 24px 14px;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -1070,7 +1070,7 @@ GENERAL LEDGER - PREMIUM CLEAN
   letter-spacing: -0.5px;
 }
 
-/* Search area */
+/* Search input */
 #ledger-search{
   width: 380px !important;
   max-width: 100%;
@@ -1080,7 +1080,6 @@ GENERAL LEDGER - PREMIUM CLEAN
   border-radius: 10px;
   background: #fff;
   box-sizing: border-box;
-  transition: all 0.18s ease;
 }
 
 #ledger-search:focus{
@@ -1089,11 +1088,6 @@ GENERAL LEDGER - PREMIUM CLEAN
   box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
 }
 
-#ledger-search::placeholder{
-  color: #8a8a8a;
-}
-
-/* Account dropdown */
 #ledger-account{
   margin-top: 10px;
   margin-bottom: 18px;
@@ -1113,9 +1107,9 @@ GENERAL LEDGER - PREMIUM CLEAN
   box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
 }
 
+/* Table */
 #ledger table{
   width: 100%;
-  max-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   background: #ffffff;
@@ -1123,6 +1117,11 @@ GENERAL LEDGER - PREMIUM CLEAN
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+}
+
+#ledger th,
+#ledger td{
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -1134,18 +1133,13 @@ GENERAL LEDGER - PREMIUM CLEAN
   text-align: center;
   padding: 10px 6px;
   border-bottom: 2px solid #ff7a1a;
+  line-height: 1.15;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
-  line-height: 1.15;
 }
 
-#ledger th,
-#ledger td{
-  min-width: 0;
-}
-
-/* Body cells */
+/* Body */
 #ledger tbody td{
   font-size: 12px;
   color: #222;
@@ -1159,27 +1153,6 @@ GENERAL LEDGER - PREMIUM CLEAN
   overflow-wrap: anywhere;
 }
 
-#ledger th,
-#ledger td{
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-#ledger tbody td:nth-child(9),
-#ledger tbody td:nth-child(10),
-#ledger tbody td:nth-child(11){
-  white-space: nowrap;
-  word-break: normal;
-  overflow-wrap: normal;
-}
-
-#ledger thead th:nth-child(9),
-#ledger thead th:nth-child(10),
-#ledger thead th:nth-child(11){
-  white-space: nowrap;
-}
-
 #ledger tbody tr:nth-child(even) td{
   background: #fffaf6;
 }
@@ -1188,28 +1161,33 @@ GENERAL LEDGER - PREMIUM CLEAN
   background: #fff1e6;
 }
 
-/* Numeric columns */
+/* Debit, Credit, Running Balance */
+#ledger tbody td:nth-child(8),
 #ledger tbody td:nth-child(9),
-#ledger tbody td:nth-child(10),
-#ledger tbody td:nth-child(11){
+#ledger tbody td:nth-child(10){
   text-align: right;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
-/* Action column */
-#ledger tbody td:nth-child(8){
-  text-align: center;
-  vertical-align: middle;
-}
-
-/* Running balance stronger */
-#ledger tbody td:nth-child(11){
+/* Running Balance highlight */
+#ledger tbody td:nth-child(10){
   color: #7a3d12;
   font-weight: 800;
 }
 
-/* Edit/Delete link */
+/* Actions column */
+#ledger thead th:nth-child(11),
+#ledger tbody td:nth-child(11){
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Action link/button */
 #ledger a{
   color: #8a420c;
   font-weight: 700;
@@ -1220,6 +1198,7 @@ GENERAL LEDGER - PREMIUM CLEAN
   border-radius: 9px;
   display: inline-block;
   transition: all 0.18s ease;
+  white-space: nowrap;
 }
 
 #ledger a:hover{
@@ -1234,7 +1213,6 @@ GENERAL LEDGER - PREMIUM CLEAN
   font-size: 12px;
 }
 
-/* Empty row message */
 #ledger tbody tr td[colspan]{
   text-align: center;
   color: #777;
@@ -1242,29 +1220,15 @@ GENERAL LEDGER - PREMIUM CLEAN
   padding: 18px;
 }
 
-html, body{
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-*{
-  box-sizing: border-box;
-}
-
-#ledger table{
-  width: 100%;
-  table-layout: fixed;
-}
-
-#ledger thead th:nth-child(1){ width: 7%; }
-#ledger thead th:nth-child(2){ width: 9%; }
-#ledger thead th:nth-child(3){ width: 18%; }
-#ledger thead th:nth-child(4){ width: 6%; }
-#ledger thead th:nth-child(5){ width: 8%; }
-#ledger thead th:nth-child(6){ width: 12%; }
-#ledger thead th:nth-child(7){ width: 14%; }
-#ledger thead th:nth-child(8){ width: 9%; }
-#ledger thead th:nth-child(9){ width: 6%; }
-#ledger thead th:nth-child(10){ width: 6%; }
-#ledger thead th:nth-child(11){ width: 8%; }
+/* Exact column widths = 100% total */
+#ledger thead th:nth-child(1){ width: 7%; }   /* Date */
+#ledger thead th:nth-child(2){ width: 9%; }   /* Ref */
+#ledger thead th:nth-child(3){ width: 17%; }  /* Description */
+#ledger thead th:nth-child(4){ width: 6%; }   /* Dept/CC */
+#ledger thead th:nth-child(5){ width: 8%; }   /* Pay Method */
+#ledger thead th:nth-child(6){ width: 12%; }  /* Client/Vendor */
+#ledger thead th:nth-child(7){ width: 14%; }  /* Remarks */
+#ledger thead th:nth-child(8){ width: 7%; }   /* Debit */
+#ledger thead th:nth-child(9){ width: 6%; }   /* Credit */
+#ledger thead th:nth-child(10){ width: 7%; }  /* Running Balance */
+#ledger thead th:nth-child(11){ width: 7%; }  /* Actions */
