@@ -19,11 +19,28 @@
    <span id="auth-msg"></span>
   </div>
 
-  <div id="auth-logged-in" style="display:none;">
-    Logged in as: <b id="auth-user"></b>
-    <button onclick="signOut()" style="margin-left:10px;">Logout</button>
-    <span id="auth-msg-in" style="margin-left:10px;"></span>
+ <div id="auth-logged-in" class="profile-wrap" style="display:none;">
+  <button id="profile-btn" type="button" class="profile-btn" onclick="toggleProfileMenu(event)">
+    <img
+      id="profile-avatar"
+      class="profile-avatar"
+      src="https://ui-avatars.com/api/?name=User&background=ff8a00&color=fff"
+      alt="Profile"
+    >
+  </button>
+
+  <div id="profile-menu" class="profile-menu" style="display:none;">
+    <div class="profile-menu-head">
+      <div class="profile-menu-name" id="auth-user"></div>
+      <div class="profile-menu-sub">Account</div>
+    </div>
+
+    <button type="button" class="profile-menu-item" onclick="signOut()">
+      Logout
+    </button>
   </div>
+
+  <span id="auth-msg-in" style="display:none;"></span>
 </div>
 
 <!-- ========================= APP ========================= -->
