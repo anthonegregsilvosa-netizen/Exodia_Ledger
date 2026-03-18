@@ -1172,7 +1172,7 @@ function renderCOA() {
 
 if (list.length === 0) {
   const tr = document.createElement("tr");
-  tr.innerHTML = `<td colspan="11" style="text-align:center;">No transactions found for the selected account within the specified date range.</td>`;
+  tr.innerHTML = `<td colspan="6" style="text-align:center;">No accounts found for this filter.</td>`;
   tbody.appendChild(tr);
 }
 }
@@ -1208,26 +1208,35 @@ sel.appendChild(o0);
     });
 
     const savedAcct = localStorage.getItem(LEDGER_ACCOUNT_KEY) || "";
-    if (savedAcct) {
-      if (!COA_BY_ID[savedAcct] && COA_BY_CODE[savedAcct]?.id) {
-        sel.value = String(COA_BY_CODE[savedAcct].id);
-      } else {
-        sel.value = savedAcct;
-      }
-    }
+
+if (savedAcct) {
+  if (!COA_BY_ID[savedAcct] && COA_BY_CODE[savedAcct]?.id) {
+    sel.value = String(COA_BY_CODE[savedAcct].id);
+  } else if ([...sel.options].some((o) => o.value === savedAcct)) {
+    sel.value = savedAcct;
+  } else {
+    sel.value = "";
+  }
+} else {
+  sel.value = "";
+}
   }
 
   tbody.innerHTML = "";
-const accountId = sel.value;
-localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
+
+const accountId = String(sel.value || "").trim();
+localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId);
 
 if (!accountId) {
   const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td colspan="11" style="text-align:center; padding:20px;">
-      Please select an account to view the ledger.
-    </td>
-  `;
+
+  const td = document.createElement("td");
+  td.colSpan = 11;
+  td.style.textAlign = "center";
+  td.style.padding = "20px";
+  td.textContent = "Please select an account to view the ledger.";
+
+  tr.appendChild(td);
   tbody.appendChild(tr);
   return;
 }
