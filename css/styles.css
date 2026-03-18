@@ -1016,13 +1016,14 @@ JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
 
 #journal-history thead th:last-child,
 #journal-history tbody td:last-child{
-  width: 72px;
+  width: 95px;
+  min-width: 95px;
   text-align: center;
   vertical-align: middle;
 }
 
 #journal-history button{
-  padding: 7px 12px;
+  padding: 7px 14px;
   border: 1px solid #f0c3a1;
   background: #fff4eb;
   color: #8a420c;
@@ -1030,6 +1031,8 @@ JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
   cursor: pointer;
   font-weight: 700;
   font-size: 13px;
+  white-space: nowrap;
+  min-width: 58px;
   transition: all 0.18s ease;
 }
 
