@@ -1260,4 +1260,165 @@ JOURNAL HISTORY - FIT WITHOUT SIDE SCROLL
   color: #555;
 }
 
+/* =========================
+GENERAL LEDGER - PREMIUM CLEAN
+========================= */
+
+#ledger{
+  padding: 24px;
+  width: 100%;
+  max-width: 1300px;
+  margin: auto;
+}
+
+#ledger h2{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 700;
+  margin: 6px 0 20px;
+  color: #181818;
+  letter-spacing: -0.5px;
+}
+
+/* Search area */
+#ledger-search{
+  width: 380px !important;
+  max-width: 100%;
+  padding: 11px 13px !important;
+  font-size: 15px !important;
+  border: 1px solid #e5c9b4;
+  border-radius: 10px;
+  background: #fff;
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+#ledger-search:focus{
+  outline: none;
+  border-color: #ff8a3d;
+  box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
+}
+
+#ledger-search::placeholder{
+  color: #8a8a8a;
+}
+
+/* Account dropdown */
+#ledger-account{
+  margin-top: 10px;
+  margin-bottom: 18px;
+  width: 430px;
+  max-width: 100%;
+  padding: 11px 13px;
+  font-size: 15px;
+  border: 1px solid #e5c9b4;
+  border-radius: 10px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+#ledger-account:focus{
+  outline: none;
+  border-color: #ff8a3d;
+  box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
+}
+
+/* Ledger table */
+#ledger table{
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #f0ddd0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+}
+
+/* Header */
+#ledger thead th{
+  background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  padding: 14px 10px;
+  border-bottom: 2px solid #ff7a1a;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* Body cells */
+#ledger tbody td{
+  font-size: 13px;
+  color: #222;
+  padding: 12px 10px;
+  border-bottom: 1px solid #f3e2d5;
+  vertical-align: top;
+  line-height: 1.4;
+  background: #fff;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#ledger tbody tr:nth-child(even) td{
+  background: #fffaf6;
+}
+
+#ledger tbody tr:hover td{
+  background: #fff1e6;
+}
+
+/* Numeric columns */
+#ledger tbody td:nth-child(9),
+#ledger tbody td:nth-child(10),
+#ledger tbody td:nth-child(11){
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Action column */
+#ledger tbody td:nth-child(8){
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Running balance stronger */
+#ledger tbody td:nth-child(11){
+  color: #7a3d12;
+  font-weight: 800;
+}
+
+/* Edit/Delete link */
+#ledger a{
+  color: #8a420c;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid #f0c3a1;
+  background: #fff4eb;
+  border-radius: 9px;
+  display: inline-block;
+  transition: all 0.18s ease;
+}
+
+#ledger a:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #fff;
+  text-decoration: none;
+}
+
+#ledger .muted{
+  color: #888;
+  font-size: 12px;
+}
+
+/* Empty row message */
+#ledger tbody tr td[colspan]{
+  text-align: center;
+  color: #777;
+  font-size: 14px;
+  padding: 18px;
+}
 
