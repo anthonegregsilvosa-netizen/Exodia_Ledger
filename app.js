@@ -563,7 +563,7 @@ window.filterLedgerAccounts = function filterLedgerAccounts() {
 
   const o0 = document.createElement("option");
 o0.value = "";
-o0.textContent = q ? "Please select an account from the results" : "Please select an account";
+o0.textContent = q ? "Please select an account from the results" : "Please select an account to view the ledger";
 sel.appendChild(o0);
 
   const sorted = [...COA].sort((a, b) => {
@@ -1190,7 +1190,7 @@ function renderLedger() {
 
     const o0 = document.createElement("option");
 o0.value = "";
-o0.textContent = "Please select an account";
+o0.textContent = "Please select an account to view the ledger";
 sel.appendChild(o0);
 
     const sorted = [...COA].sort((a, b) => {
@@ -1278,11 +1278,17 @@ tr.innerHTML = `
     tbody.appendChild(tr);
   });
 
-  if (acctLines.length === 0) {
+if (acctLines.length === 0) {
   const tr = document.createElement("tr");
+
+  const hasDateFilter = !!(ledgerFilterFrom || ledgerFilterTo);
+  const emptyMessage = hasDateFilter
+    ? "No transactions found for the selected account within the specified date range."
+    : "No transactions found for the selected account.";
+
   tr.innerHTML = `
     <td colspan="11" style="text-align:center; padding:20px;">
-      No transactions for this account (with current filter).
+      ${emptyMessage}
     </td>
   `;
   tbody.appendChild(tr);
