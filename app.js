@@ -69,7 +69,7 @@ function setUI(isLoggedIn, email = "") {
   if (isLoggedIn) {
     if (app) app.style.display = "block";
     if (outBox) outBox.style.display = "none";
-    if (inBox) inBox.style.display = "flex";
+    if (inBox) inBox.style.display = "inline-flex";
     if (userEl) userEl.textContent = email || "";
 
     if (avatarEl) {
