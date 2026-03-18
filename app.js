@@ -3585,3 +3585,5 @@ function getNextAccountCode() {
   if (codes.length === 0) return "1001";
   return String(Math.max(...codes) + 1);
 }
+
+
