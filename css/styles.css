@@ -1265,9 +1265,9 @@ GENERAL LEDGER - PREMIUM CLEAN
 ========================= */
 
 #ledger{
-  padding: 24px;
+  padding: 24px 32px;
   width: 100%;
-  max-width: 1300px;
+  max-width: 1600px;   /* increased */
   margin: auto;
 }
 
