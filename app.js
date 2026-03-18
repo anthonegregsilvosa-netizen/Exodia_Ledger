@@ -1218,9 +1218,19 @@ sel.appendChild(o0);
   }
 
   tbody.innerHTML = "";
-  const accountId = sel.value;
-  localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
-  if (!accountId) return;
+const accountId = sel.value;
+localStorage.setItem(LEDGER_ACCOUNT_KEY, accountId || "");
+
+if (!accountId) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td colspan="11" style="text-align:center; padding:20px;">
+      Please select an account to view the ledger.
+    </td>
+  `;
+  tbody.appendChild(tr);
+  return;
+}
 
   const acct = COA.find((a) => a.id === accountId);
   const normal = acct?.normal || "Debit";
