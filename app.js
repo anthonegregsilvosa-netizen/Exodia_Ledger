@@ -5,6 +5,7 @@
 // ==============================
 const LAST_VIEW_KEY = "exodiaLedger.lastView.v1";
 const TAB_VIEW_KEY = "exodiaLedger.currentTabView.v1";
+const WORKSHEET_VIEW_KEY = "exodiaLedger.worksheetView.v1";
 
 const FILTER_YEAR_KEY = "exodiaLedger.filterYear.v1";
 const FILTER_MONTH_KEY = "exodiaLedger.filterMonth.v1";
