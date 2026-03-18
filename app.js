@@ -562,9 +562,9 @@ window.filterLedgerAccounts = function filterLedgerAccounts() {
   sel.innerHTML = "";
 
   const o0 = document.createElement("option");
-  o0.value = "";
-  o0.textContent = q ? "Select from results..." : "Select account...";
-  sel.appendChild(o0);
+o0.value = "";
+o0.textContent = q ? "Please select an account from the results" : "Please select an account";
+sel.appendChild(o0);
 
   const sorted = [...COA].sort((a, b) => {
     const ca = codeNum(a.code);
@@ -1189,9 +1189,9 @@ function renderLedger() {
     sel.innerHTML = "";
 
     const o0 = document.createElement("option");
-    o0.value = "";
-    o0.textContent = "Select account...";
-    sel.appendChild(o0);
+o0.value = "";
+o0.textContent = "Please select an account";
+sel.appendChild(o0);
 
     const sorted = [...COA].sort((a, b) => {
       const ca = codeNum(a.code);
