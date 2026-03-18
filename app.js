@@ -790,7 +790,7 @@ window.show = function (view) {
   ["coa", "journal", "ledger", "trial"].forEach((v) => {
     const el = $(v);
     if (!el) return;
-    el.style.display = v === view ? "block" : "none";
+    el.style.display = (v === view) ? "block" : "none";
   });
 
   const hist = $("journal-history");
@@ -805,10 +805,16 @@ window.show = function (view) {
   const dateBar = $("date-range-bar");
   const journalMode = localStorage.getItem(JOURNAL_VIEW_KEY) || "entry";
 
-  if (view === "journal" && journalMode === "entry") {
+  if (view === "coa") {
     if (dateBar) dateBar.style.display = "none";
-  } else {
+  } else if (view === "ledger") {
     if (dateBar) dateBar.style.display = "flex";
+  } else if (view === "trial") {
+    if (dateBar) dateBar.style.display = "flex";
+  } else if (view === "journal") {
+    if (dateBar) dateBar.style.display = (journalMode === "history") ? "flex" : "none";
+  } else {
+    if (dateBar) dateBar.style.display = "none";
   }
 
   if (view === "coa") renderCOA();
@@ -824,7 +830,7 @@ window.show = function (view) {
     showJournal(savedJournalView);
   }
 
-loadCurrentViewDateInputs();
+  loadCurrentViewDateInputs();
 };
 
 // ==============================
