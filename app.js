@@ -64,17 +64,24 @@ function setUI(isLoggedIn, email = "") {
   const outBox = $("auth-logged-out");
   const inBox = $("auth-logged-in");
   const userEl = $("auth-user");
+  const avatarEl = $("profile-avatar");
 
   if (isLoggedIn) {
     if (app) app.style.display = "block";
     if (outBox) outBox.style.display = "none";
-    if (inBox) inBox.style.display = "block";
+    if (inBox) inBox.style.display = "flex";
     if (userEl) userEl.textContent = email || "";
+
+    if (avatarEl) {
+      const safeName = encodeURIComponent(email || "User");
+      avatarEl.src = `https://ui-avatars.com/api/?name=${safeName}&background=ff8a00&color=fff`;
+    }
   } else {
     if (app) app.style.display = "none";
     if (outBox) outBox.style.display = "block";
     if (inBox) inBox.style.display = "none";
     if (userEl) userEl.textContent = "";
+    closeProfileMenu();
   }
 }
 
@@ -152,8 +159,32 @@ window.signOut = async function signOut() {
   currentUser = null;
   setAuthMsg("Logged out.");
   setAuthMsgIn("");
+  closeProfileMenu();
   setUI(false);
 };
+
+window.toggleProfileMenu = function toggleProfileMenu(event) {
+  event?.stopPropagation?.();
+
+  const menu = $("profile-menu");
+  if (!menu) return;
+
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+};
+
+window.closeProfileMenu = function closeProfileMenu() {
+  const menu = $("profile-menu");
+  if (menu) menu.style.display = "none";
+};
+
+document.addEventListener("click", (e) => {
+  const isProfileBtn = e.target?.closest?.("#profile-btn");
+  const isProfileMenu = e.target?.closest?.("#profile-menu");
+
+  if (!isProfileBtn && !isProfileMenu) {
+    closeProfileMenu();
+  }
+});
 
 // ==============================
 // Supabase helpers (JOURNAL LINES)
