@@ -177,6 +177,20 @@ window.closeProfileMenu = function closeProfileMenu() {
   if (menu) menu.style.display = "none";
 };
 
+window.toggleLedgerDownloadMenu = function toggleLedgerDownloadMenu(event) {
+  event?.stopPropagation?.();
+
+  const menu = $("ledger-download-menu");
+  if (!menu) return;
+
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+};
+
+window.closeLedgerDownloadMenu = function closeLedgerDownloadMenu() {
+  const menu = $("ledger-download-menu");
+  if (menu) menu.style.display = "none";
+};
+
 document.addEventListener("click", (e) => {
   const isProfileBtn = e.target?.closest?.("#profile-btn");
   const isProfileMenu = e.target?.closest?.("#profile-menu");
@@ -184,6 +198,7 @@ document.addEventListener("click", (e) => {
   if (!isProfileBtn && !isProfileMenu) {
     closeProfileMenu();
   }
+  
 });
 
 // ==============================
@@ -3595,9 +3610,12 @@ window.toggleCoaMenu = function (id, ev) {
 
 // close menu when clicking anywhere else
 document.addEventListener("click", (e) => {
-  const isActionBtn = e.target?.closest?.(".coa-action-btn");
-  const isMenu = e.target?.closest?.(".coa-menu");
-  if (!isActionBtn && !isMenu) closeAllCoaMenus();
+  const isLedgerBtn = e.target?.closest?.("#ledger-download-btn");
+  const isLedgerMenu = e.target?.closest?.("#ledger-download-menu");
+
+  if (!isLedgerBtn && !isLedgerMenu) {
+    closeLedgerDownloadMenu();
+  }
 });
 
 // ==============================
