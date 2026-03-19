@@ -242,8 +242,22 @@
     <select id="ledger-account" onchange="renderLedger()"></select>
 
 <div style="margin:10px 0 14px 0; display:flex; gap:10px; flex-wrap:wrap;">
-  <button class="btn primary" onclick="downloadLedgerPDF()">Download Ledger PDF</button>
-  <button class="btn" onclick="downloadLedgerExcel()">Download Ledger Excel</button>
+  <div class="ledger-actions-wrap">
+  <button
+    type="button"
+    id="ledger-download-btn"
+    class="ledger-download-btn"
+    onclick="toggleLedgerDownloadMenu(event)"
+    title="Download options"
+  >
+    ⚙
+  </button>
+
+  <div id="ledger-download-menu" class="ledger-download-menu" style="display:none;">
+    <button type="button" onclick="downloadLedgerPDF()">Download PDF</button>
+    <button type="button" onclick="downloadLedgerExcel()">Download Excel</button>
+  </div>
+</div>
 </div>
 
 <table border="1" cellpadding="6">
