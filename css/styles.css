@@ -1364,29 +1364,31 @@ LEDGER TOOLBAR + EXPORT MENU
   min-width: 280px;
 }
 
-.ledger-export-wrap{
+.ledger-actions-wrap{
   position: relative;
 }
 
-.ledger-export-btn{
-  padding: 10px 14px;
+.ledger-download-btn{
+  width: 42px;
+  height: 42px;
   border: 1px solid #f0c3a1;
   background: linear-gradient(180deg, #fffaf6 0%, #fff2e8 100%);
   color: #8a420c;
   border-radius: 10px;
   font-weight: 700;
+  font-size: 18px;
   cursor: pointer;
   box-shadow: 0 6px 14px rgba(255, 106, 0, 0.08);
   transition: all 0.18s ease;
 }
 
-.ledger-export-btn:hover{
+.ledger-download-btn:hover{
   background: #ff6a00;
   border-color: #ff6a00;
   color: #fff;
 }
 
-.ledger-export-menu{
+.ledger-download-menu{
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
@@ -1399,7 +1401,7 @@ LEDGER TOOLBAR + EXPORT MENU
   z-index: 1000;
 }
 
-.ledger-export-menu button{
+.ledger-download-menu button{
   width: 100%;
   border: none;
   background: transparent;
@@ -1412,7 +1414,7 @@ LEDGER TOOLBAR + EXPORT MENU
   cursor: pointer;
 }
 
-.ledger-export-menu button:hover{
+.ledger-download-menu button:hover{
   background: #fff1e6;
   color: #8a420c;
 }
