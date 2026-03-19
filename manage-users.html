@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage Accounts</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <style>
+    body{
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background:#f5f6f8;
+      margin:0;
+    }
+
+    .manage-wrap{
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    .manage-card{
+      background:#fff;
+      border:1px solid #f0ddd0;
+      border-radius:18px;
+      box-shadow:0 12px 28px rgba(0,0,0,0.06);
+      padding:28px;
+    }
+
+    .manage-title{
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 36px;
+      margin: 0 0 10px;
+      color:#181818;
+    }
+
+    .manage-sub{
+      color:#666;
+      margin-bottom:22px;
+      font-size:14px;
+    }
+
+    .manage-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+
+    .manage-field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .manage-field.full{
+      grid-column:1 / span 2;
+    }
+
+    .manage-field label{
+      font-size:14px;
+      font-weight:600;
+      color:#2b2b2b;
+    }
+
+    .manage-field input{
+      width:100%;
+      border:1px solid #e7cdb8;
+      border-radius:10px;
+      background:#fff;
+      padding:12px 14px;
+      font-size:15px;
+      box-sizing:border-box;
+    }
+
+    .manage-field input:focus{
+      outline:none;
+      border-color:#ff8a3d;
+      box-shadow:0 0 0 4px rgba(255,106,0,0.10);
+    }
+
+    .manage-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:20px;
+    }
+
+    .manage-btn{
+      padding:10px 16px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+    }
+
+    .manage-btn.primary{
+      background:#ff6a00;
+      color:#fff;
+    }
+
+    .manage-btn.primary:hover{
+      background:#e45c00;
+    }
+
+    .manage-btn.secondary{
+      background:#fff4eb;
+      color:#8a420c;
+      border:1px solid #f0c3a1;
+    }
+
+    .manage-btn.secondary:hover{
+      background:#ffe9d8;
+    }
+
+    .manage-status{
+      margin-top:14px;
+      font-size:14px;
+      font-weight:600;
+    }
+
+    @media (max-width: 700px){
+      .manage-grid{
+        grid-template-columns:1fr;
+      }
+
+      .manage-field.full{
+        grid-column:auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="manage-wrap">
+    <div class="manage-card">
+      <h1 class="manage-title">Manage Accounts</h1>
+      <div class="manage-sub">
+        Create a new user account for your ledger system.
+      </div>
+
+      <div class="manage-grid">
+        <div class="manage-field">
+          <label for="mu-first-name">First Name</label>
+          <input id="mu-first-name" type="text" placeholder="Juan">
+        </div>
+
+        <div class="manage-field">
+          <label for="mu-last-name">Last Name</label>
+          <input id="mu-last-name" type="text" placeholder="Dela Cruz">
+        </div>
+
+        <div class="manage-field full">
+          <label for="mu-email">Email *</label>
+          <input id="mu-email" type="email" placeholder="user@email.com">
+        </div>
+
+        <div class="manage-field full">
+          <label for="mu-password">Password *</label>
+          <input id="mu-password" type="password" placeholder="Enter password">
+        </div>
+      </div>
+
+      <div class="manage-actions">
+        <button class="manage-btn primary" onclick="createManagedUser()">Create User</button>
+        <button class="manage-btn secondary" onclick="goBack()">Back</button>
+      </div>
+
+      <div id="mu-status" class="manage-status"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById("mu-status");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.style.color = isError ? "crimson" : "#2b2b2b";
+    }
+
+    function goBack() {
+      window.location.href = "./index.html";
+    }
+
+    async function createManagedUser() {
+      const first_name = document.getElementById("mu-first-name").value.trim();
+      const last_name = document.getElementById("mu-last-name").value.trim();
+      const email = document.getElementById("mu-email").value.trim();
+      const password = document.getElementById("mu-password").value;
+
+      if (!email || !password) {
+        setStatus("Email and password are required.", true);
+        return;
+      }
+
+      setStatus("Creating user...");
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            first_name,
+            last_name
+          })
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          setStatus(result.error || "Failed to create user.", true);
+          return;
+        }
+
+        setStatus("User created successfully.");
+
+        document.getElementById("mu-first-name").value = "";
+        document.getElementById("mu-last-name").value = "";
+        document.getElementById("mu-email").value = "";
+        document.getElementById("mu-password").value = "";
+      } catch (err) {
+        setStatus(err.message || "Unexpected error.", true);
+      }
+    }
+  </script>
+</body>
+</html>
