@@ -223,64 +223,65 @@
 </section>
 
   <!-- ========================= LEDGER ========================= -->
-  
-  <section id="ledger" style="display:none; margin-top:18px;">
-    <h2>General Ledger</h2>
+<section id="ledger" style="display:none; margin-top:18px;">
+  <h2>General Ledger</h2>
 
-<div style="margin: 10px 0 6px 0;">
-  <label for="ledger-search" style="font-size:16px; font-weight:600; margin-right:8px;">
-    Search account:
-  </label>
-  <input
-    id="ledger-search"
-    type="text"
-    placeholder="Type code or name (e.g. 1001, cash, bank)..."
-    oninput="filterLedgerAccounts()"
-  />
-</div>
+  <div class="ledger-toolbar">
+    <div class="ledger-toolbar-left">
+      <div class="ledger-search-wrap">
+        <label for="ledger-search" class="ledger-label">Search account:</label>
+        <input
+          id="ledger-search"
+          type="text"
+          placeholder="Type code or name (e.g. 1001, cash, bank)..."
+          oninput="filterLedgerAccounts()"
+        />
+      </div>
 
-    <select id="ledger-account" onchange="renderLedger()"></select>
+      <div class="ledger-select-row">
+        <select id="ledger-account" onchange="renderLedger()"></select>
+      </div>
+    </div>
 
-<div style="margin:10px 0 14px 0; display:flex; gap:10px; flex-wrap:wrap;">
-  <div class="ledger-actions-wrap">
-  <button
-    type="button"
-    id="ledger-download-btn"
-    class="ledger-download-btn"
-    onclick="toggleLedgerDownloadMenu(event)"
-    title="Download options"
-  >
-    ⚙
-  </button>
+    <div class="ledger-toolbar-right">
+      <div class="ledger-actions-wrap">
+        <button
+          type="button"
+          id="ledger-download-btn"
+          class="ledger-download-btn"
+          onclick="toggleLedgerDownloadMenu(event)"
+          title="Download options"
+        >
+          ⚙
+        </button>
 
-  <div id="ledger-download-menu" class="ledger-download-menu" style="display:none;">
-    <button type="button" onclick="downloadLedgerPDF()">Download PDF</button>
-    <button type="button" onclick="downloadLedgerExcel()">Download Excel</button>
+        <div id="ledger-download-menu" class="ledger-download-menu" style="display:none;">
+          <button type="button" onclick="downloadLedgerPDF()">Download PDF</button>
+          <button type="button" onclick="downloadLedgerExcel()">Download Excel</button>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
-</div>
 
-<table border="1" cellpadding="6">
-    
-    <table border="1" cellpadding="6">
-      <thead>
-  <tr>
-    <th>Date</th>
-    <th>Ref</th>
-    <th>Description</th>
-    <th>Dept/CC</th>
-    <th>Pay Method</th>
-    <th>Client/Vendor</th>
-    <th>Remarks</th>
-    <th>Debit</th>
-    <th>Credit</th>
-    <th>Running Balance</th>
-    <th>Actions</th>
-  </tr>
-</thead>
-      <tbody id="ledger-body"></tbody>
-    </table>
-  </section>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Ref</th>
+        <th>Description</th>
+        <th>Dept/CC</th>
+        <th>Pay Method</th>
+        <th>Client/Vendor</th>
+        <th>Remarks</th>
+        <th>Debit</th>
+        <th>Credit</th>
+        <th>Running Balance</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="ledger-body"></tbody>
+  </table>
+</section>
 
   <!-- ========================= TRIAL ========================= -->
   <section id="trial" style="display:none;">
