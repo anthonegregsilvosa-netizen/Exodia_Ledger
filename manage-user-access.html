@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage User Access</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <style>
+    .access-page {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #f0ddd0;
+      border-radius: 20px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+    }
+
+    .access-page h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 48px;
+      margin: 0 0 10px;
+      color: #181818;
+    }
+
+    .access-page p {
+      color: #666;
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+
+    .access-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .access-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .access-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #f0ddd0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+    }
+
+    .access-table th {
+      background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 2px solid #ff7a1a;
+    }
+
+    .access-table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid #f3e2d5;
+      font-size: 14px;
+      color: #222;
+      vertical-align: middle;
+    }
+
+    .access-table tbody tr:nth-child(even) {
+      background: #fffaf6;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status-active {
+      background: #ecfdf3;
+      color: #027a48;
+      border: 1px solid #abefc6;
+    }
+
+    .status-disabled {
+      background: #fff1f3;
+      color: #c01048;
+      border: 1px solid #f4b4c2;
+    }
+
+    .perm-badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #fff4eb;
+      color: #8a420c;
+      border: 1px solid #f0c3a1;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-small {
+      padding: 7px 12px;
+      border-radius: 10px;
+      border: 1px solid #f0c3a1;
+      background: #fff4eb;
+      color: #8a420c;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-small:hover {
+      background: #ff6a00;
+      color: #fff;
+      border-color: #ff6a00;
+    }
+
+    .btn-danger {
+      border-color: #f1b2b2;
+      background: #fff5f5;
+      color: #b42318;
+    }
+
+    .btn-danger:hover {
+      background: #d92d20;
+      border-color: #d92d20;
+      color: #fff;
+    }
+
+    .empty-state {
+      padding: 24px;
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="access-page">
+    <div class="access-topbar">
+      <div>
+        <h1>Manage User Access</h1>
+        <p>View users, access level, status, and basic account controls.</p>
+      </div>
+
+      <div class="access-actions">
+        <button class="btn-add" onclick="window.location.href='./create-user.html'">+ Create User</button>
+        <button class="btn" onclick="window.location.href='./index.html'">Back</button>
+      </div>
+    </div>
+
+    <table class="access-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Access</th>
+          <th>Last Online</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="user-access-body">
+        <tr>
+          <td>Jethel Oncines</td>
+          <td>jethel@example.com</td>
+          <td><span class="status-badge status-active">Active</span></td>
+          <td><span class="perm-badge">Editor</span></td>
+          <td>03/20/2026 9:15 AM</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-small">Edit</button>
+              <button class="btn-small">Disable</button>
+              <button class="btn-small btn-danger">Remove</button>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td>Finance Viewer</td>
+          <td>viewer@example.com</td>
+          <td><span class="status-badge status-disabled">Disabled</span></td>
+          <td><span class="perm-badge">View Only</span></td>
+          <td>03/18/2026 3:40 PM</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-small">Edit</button>
+              <button class="btn-small">Enable</button>
+              <button class="btn-small btn-danger">Remove</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
