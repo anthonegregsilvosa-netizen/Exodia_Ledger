@@ -1313,3 +1313,106 @@ GENERAL LEDGER - FINAL FIT
 #ledger thead th:nth-child(9){ width: 6%; }   /* Credit */
 #ledger thead th:nth-child(10){ width: 7%; }  /* Running Balance */
 #ledger thead th:nth-child(11){ width: 7%; }  /* Actions */
+
+/* =========================
+LEDGER TOOLBAR + EXPORT MENU
+========================= */
+
+.ledger-toolbar{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ledger-toolbar-left{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 320px;
+}
+
+.ledger-toolbar-right{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ledger-search-wrap{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ledger-label{
+  font-size: 16px;
+  font-weight: 700;
+  color: #181818;
+}
+
+.ledger-select-row{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ledger-select-row select{
+  min-width: 280px;
+}
+
+.ledger-export-wrap{
+  position: relative;
+}
+
+.ledger-export-btn{
+  padding: 10px 14px;
+  border: 1px solid #f0c3a1;
+  background: linear-gradient(180deg, #fffaf6 0%, #fff2e8 100%);
+  color: #8a420c;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(255, 106, 0, 0.08);
+  transition: all 0.18s ease;
+}
+
+.ledger-export-btn:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #fff;
+}
+
+.ledger-export-menu{
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #f0ddd0;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+  padding: 6px;
+  z-index: 1000;
+}
+
+.ledger-export-menu button{
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #222;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ledger-export-menu button:hover{
+  background: #fff1e6;
+  color: #8a420c;
+}
