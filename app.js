@@ -1298,10 +1298,11 @@ function renderLedger() {
       return true;
     })
     .sort(
-      (a, b) =>
-        String(a.entry_date || "").localeCompare(String(b.entry_date || "")) ||
-        String(a.ref || "").localeCompare(String(b.ref || ""))
-    );
+  (a, b) =>
+    String(a.entry_date || "").localeCompare(String(b.entry_date || "")) ||
+    String(a.created_at || "").localeCompare(String(b.created_at || "")) ||
+    String(a.id || "").localeCompare(String(b.id || ""))
+);
 
   let running = 0;
 
