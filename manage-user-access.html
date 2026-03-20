@@ -177,5 +177,128 @@
       <tbody id="user-access-body"></tbody>
     </table>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function formatLastOnline(value) {
+      if (!value) return "—";
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return value;
+      return d.toLocaleString();
+    }
+
+    function esc(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById("user-access-body");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Loading users...</td></tr>`;
+
+      const { data, error } = await sb
+        .from("user_access")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${esc(error.message)}</td></tr>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No users found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = "";
+
+      data.forEach((user) => {
+        const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
+        const statusClass = user.status === "Active" ? "status-active" : "status-disabled";
+        const toggleLabel = user.status === "Active" ? "Disable" : "Enable";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${esc(fullName)}</td>
+          <td>${esc(user.email || "")}</td>
+          <td><span class="status-badge ${statusClass}">${esc(user.status || "—")}</span></td>
+          <td><span class="perm-badge">${esc(user.access_level || "Editor")}</span></td>
+          <td>${esc(formatLastOnline(user.last_online))}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-small" onclick="editUser('${user.id}')">Edit</button>
+              <button class="btn-small" onclick="toggleUserStatus('${user.id}', '${user.status}')">${toggleLabel}</button>
+              <button class="btn-small btn-danger" onclick="removeUser('${user.id}')">Remove</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function editUser(id) {
+      const newAccess = prompt("Enter access level: Editor or View Only", "Editor");
+      if (!newAccess) return;
+
+      const { error } = await sb
+        .from("user_access")
+        .update({ access_level: newAccess })
+        .eq("id", id);
+
+      if (error) {
+        alert(error.message || "Failed to update access.");
+        return;
+      }
+
+      loadUsers();
+    }
+
+    async function toggleUserStatus(id, currentStatus) {
+      const newStatus = currentStatus === "Active" ? "Disabled" : "Active";
+
+      const { error } = await sb
+        .from("user_access")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) {
+        alert(error.message || "Failed to update status.");
+        return;
+      }
+
+      loadUsers();
+    }
+
+    async function removeUser(id) {
+      const ok = confirm("Remove this user from user access list?");
+      if (!ok) return;
+
+      const { error } = await sb
+        .from("user_access")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        alert(error.message || "Failed to remove user.");
+        return;
+      }
+
+      loadUsers();
+    }
+
+    loadUsers();
+  </script>
 </body>
 </html>
