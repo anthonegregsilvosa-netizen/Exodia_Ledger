@@ -835,13 +835,22 @@ window.showWorksheet = function (view) {
   if (sfp) sfp.style.display = (view === "sfp") ? "block" : "none";
   if (frs) frs.style.display = (view === "frs") ? "block" : "none";
 
+  document.querySelectorAll(".worksheet-tab-btn").forEach((btn) => {
+    btn.classList.remove("active");
+  });
+
+  const buttons = document.querySelectorAll(".worksheet-tab-btn");
+  if (view === "trial" && buttons[0]) buttons[0].classList.add("active");
+  if (view === "pl" && buttons[1]) buttons[1].classList.add("active");
+  if (view === "sfp" && buttons[2]) buttons[2].classList.add("active");
+  if (view === "frs" && buttons[3]) buttons[3].classList.add("active");
+
   if (view === "trial") renderTrialBalance();
   if (view === "pl") renderProfitAndLoss();
   if (view === "sfp") renderStatementOfFinancialPosition();
   if (view === "frs") renderFinancialReportSummary();
 
   loadCurrentViewDateInputs();
-  
 };
 
 // ==============================
@@ -1941,7 +1950,8 @@ function renderProfitAndLoss() {
   let totalRevenue = 0;
 
   const revHead = document.createElement("tr");
-  revHead.innerHTML = `<td colspan="2"><b>Revenue</b></td>`;
+  revHead.className = "section-header";
+  revHead.innerHTML = `<td colspan="2">Revenue</td>`;
   tbody.appendChild(revHead);
 
   revenueAccounts.forEach((acct) => {
@@ -2012,7 +2022,8 @@ function renderProfitAndLoss() {
   let totalExpense = 0;
 
   const expHead = document.createElement("tr");
-  expHead.innerHTML = `<td colspan="2"><b>Expenses</b></td>`;
+  expHead.className = "section-header";
+  expHead.innerHTML = `<td colspan="2">Expenses</td>`;
   tbody.appendChild(expHead);
 
   // -----------------------------
@@ -2056,9 +2067,10 @@ function renderProfitAndLoss() {
   // COMPANY EXPENSES AFTER DEPARTMENT EXPENSES
   // -----------------------------
   if (companyItems.length > 0) {
-    const companyHead = document.createElement("tr");
-    companyHead.innerHTML = `<td colspan="2"><b>Company Expenses</b></td>`;
-    tbody.appendChild(companyHead);
+  const companyHead = document.createElement("tr");
+  companyHead.className = "section-header";
+  companyHead.innerHTML = `<td colspan="2">Company Expenses</td>`;
+  tbody.appendChild(companyHead);
 
     companyItems
       .sort((a, b) => {
@@ -2130,23 +2142,24 @@ function renderStatementOfFinancialPosition() {
   let totalLiabilities = 0;
   let totalEquity = 0;
 
-  function addSectionRow(title) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td colspan="3" style="font-weight:bold; background:#f5f5f5;">${esc(title)}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+function addSectionRow(title) {
+  const tr = document.createElement("tr");
+  tr.className = "section-header";
+  tr.innerHTML = `
+    <td colspan="3">${esc(title)}</td>
+  `;
+  tbody.appendChild(tr);
+}
 
-  function addAccountRow(acct, amount) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${esc(acct.code || "")}</td>
-      <td>${esc(acct.name || "")}</td>
-      <td style="text-align:right;">${money(amount)}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+function addTotalRow(title, amount) {
+  const tr = document.createElement("tr");
+  tr.className = "total-row";
+  tr.innerHTML = `
+    <td colspan="2">${esc(title)}</td>
+    <td style="text-align:right;">${money(amount)}</td>
+  `;
+  tbody.appendChild(tr);
+}
 
   function addTotalRow(title, amount) {
     const tr = document.createElement("tr");
