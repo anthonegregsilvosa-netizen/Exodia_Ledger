@@ -1849,3 +1849,98 @@ WORKSHEET - CLEAN PREMIUM DESIGN
     min-width: 0;
   }
 }
+
+/* =========================
+LOGIN SCREEN (CENTERED)
+========================= */
+
+#auth-box{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fff6ef, #f3f4f6);
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Login card */
+#auth-logged-out{
+  background: #ffffff;
+  padding: 30px 28px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Title */
+#auth-logged-out::before{
+  content: "Exodia Ledger Login";
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #222;
+}
+
+/* Inputs */
+#auth-email,
+#auth-pass{
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* Focus */
+#auth-email:focus,
+#auth-pass:focus{
+  outline: none;
+  border-color: #ff6a00;
+  box-shadow: 0 0 0 3px rgba(255,106,0,0.15);
+}
+
+/* Login button */
+#auth-login-btn{
+  padding: 12px;
+  background: #ff6a00;
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+#auth-login-btn:hover{
+  background: #e55b00;
+}
+
+/* Show password button */
+#auth-toggle-pass{
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* Wrap password field */
+#auth-pass{
+  position: relative;
+}
+
+/* Message */
+#auth-msg{
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+}
