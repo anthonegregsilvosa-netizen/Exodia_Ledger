@@ -917,6 +917,11 @@ window.filterCOA = function (type) {
 };
 
 window.editAccountPrompt = async function editAccountPrompt(accountId) {
+  if (!canEditBooks()) {
+  alert("You only have view access.");
+  return;
+}
+  
   if (!currentUser) return alert("Please login first.");
   const acct = COA.find((a) => a.id === accountId);
   if (!acct) return alert("Account not found.");
@@ -1001,6 +1006,11 @@ window.addCOAAccount = async function addCOAAccount() {
 // Journal Entry
 // ==============================
 window.addLine = function () {
+  if (!canEditBooks()) {
+    alert("You only have view access.");
+    return;
+  }
+
   const tbody = $("je-lines");
   if (!tbody) return;
 
@@ -1049,6 +1059,11 @@ delBtn.onclick = () => tr.remove();
 };
 
 window.saveJournal = async function () {
+  if (!canEditBooks()) {
+    setStatus("You only have view access.");
+    return;
+  }
+
   if (!currentUser) return setStatus("Please login first.");
 
   const entry_date = $("je-date")?.value || "";
@@ -2151,6 +2166,16 @@ function addSectionRow(title) {
   tbody.appendChild(tr);
 }
 
+function addAccountRow(acct, amount) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${esc(acct.code || "")}</td>
+    <td>${esc(acct.name || "")}</td>
+    <td style="text-align:right;">${money(amount)}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
 function addTotalRow(title, amount) {
   const tr = document.createElement("tr");
   tr.className = "total-row";
@@ -2160,15 +2185,6 @@ function addTotalRow(title, amount) {
   `;
   tbody.appendChild(tr);
 }
-
-  function addTotalRow(title, amount) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td colspan="2"><b>${esc(title)}</b></td>
-      <td style="text-align:right;"><b>${money(amount)}</b></td>
-    `;
-    tbody.appendChild(tr);
-  }
 
   addSectionRow("Assets");
   assetAccounts.forEach((acct) => {
@@ -3252,12 +3268,50 @@ function applyUserAccessUI() {
 
   const createBtn = $("menu-create-user");
   const manageBtn = $("menu-manage-access");
-
-  const email = String(currentUser?.email || "").toLowerCase();
-  const isAdmin = role === "admin" || email === "financeadmin@exodiagamedev.com";
+  const isAdmin = isAdminUser();
+  const canEdit = canEditBooks();
 
   if (createBtn) createBtn.style.display = isAdmin ? "block" : "none";
   if (manageBtn) manageBtn.style.display = isAdmin ? "block" : "none";
+
+  const addAccountBtn = document.querySelector("#coa-toolbar .btn-add");
+  if (addAccountBtn) addAccountBtn.style.display = canEdit ? "inline-block" : "none";
+
+  const saveJournalBtn = document.querySelector(".je-actions .btn-dark");
+  const addLineBtn = document.querySelector(".je-actions .btn-soft");
+
+  if (saveJournalBtn) saveJournalBtn.style.display = canEdit ? "inline-block" : "none";
+  if (addLineBtn) addLineBtn.style.display = canEdit ? "inline-block" : "none";
+}
+
+function getCurrentAccessLevel() {
+  return String(currentManagedUser?.access_level || "").toLowerCase();
+}
+
+function isAdminUser() {
+  const email = String(currentUser?.email || "").toLowerCase();
+  return getCurrentAccessLevel() === "admin" || email === "financeadmin@exodiagamedev.com";
+}
+
+function isEditorUser() {
+  return getCurrentAccessLevel() === "editor";
+}
+
+function isViewerUser() {
+  const role = getCurrentAccessLevel();
+  return role === "view only" || role === "viewer";
+}
+
+function canManageUsers() {
+  return isAdminUser();
+}
+
+function canEditBooks() {
+  return isAdminUser() || isEditorUser();
+}
+
+function canViewBooks() {
+  return isAdminUser() || isEditorUser() || isViewerUser();
 }
 
 // ==============================
@@ -3690,6 +3744,11 @@ document.addEventListener("click", (e) => {
 // DELETE COA ACCOUNT (soft delete)
 // ==============================
 window.deleteCOAAccount = async function (id) {
+  if (!canEditBooks()) {
+    alert("You only have view access.");
+    return;
+  }
+
   if (!currentUser) return alert("Please login first.");
 
   const acct = COA.find((a) => a.id === id);
@@ -3782,8 +3841,13 @@ window.addAccountPopup = async function () {
 };
 
 window.openAddCoaModal = function () {
+  if (!canEditBooks()) {
+    alert("You only have view access.");
+    return;
+  }
+
   $("addcoa-modal").style.display = "grid";
-  $("addcoa-code").value = getNextAccountCode();   // ✅ auto next
+  $("addcoa-code").value = getNextAccountCode();
   $("addcoa-name").value = "";
   $("addcoa-type").value = "Asset";
   $("addcoa-normal").value = "Debit";
@@ -3796,6 +3860,11 @@ window.closeAddCoaModal = function () {
 };
 
 window.saveAddCoaModal = async function () {
+  if (!canEditBooks()) {
+    alert("You only have view access.");
+    return;
+  }
+
   const code = $("addcoa-code").value.trim();
   const name = $("addcoa-name").value.trim();
   const type = $("addcoa-type").value;
@@ -3858,5 +3927,4 @@ function getNextAccountCode() {
   if (codes.length === 0) return "1001";
   return String(Math.max(...codes) + 1);
 }
-
 
