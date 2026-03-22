@@ -1560,3 +1560,182 @@ LEDGER TOOLBAR + EXPORT MENU
 .logout-btn{
   margin-top: 0;
 }
+
+/* =========================
+WORKSHEET - CLEAN PREMIUM DESIGN
+========================= */
+
+#trial{
+  padding: 24px;
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+#trial h2{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 40px;
+  font-weight: 700;
+  margin: 6px 0 22px;
+  color: #181818;
+  letter-spacing: -0.6px;
+}
+
+.worksheet-toolbar{
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #eee2d8;
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+  margin-bottom: 18px;
+}
+
+.worksheet-toolbar-label{
+  font-size: 15px;
+  font-weight: 800;
+  color: #4b4b4b;
+  margin-bottom: 12px;
+}
+
+.worksheet-tabs{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.worksheet-tab-btn{
+  padding: 10px 16px;
+  border: 1px solid #ffd2b3;
+  background: linear-gradient(180deg, #fffaf6 0%, #fff2e8 100%);
+  color: #8a420c;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 6px 14px rgba(255, 106, 0, 0.08);
+}
+
+.worksheet-tab-btn:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.worksheet-card{
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfa 100%);
+  border: 1px solid #f0ddd0;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.worksheet-card-head{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.worksheet-card-head h3{
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
+.worksheet-subtext{
+  margin: 0;
+  font-size: 13px;
+  color: #777;
+}
+
+.worksheet-download-btn{
+  padding: 10px 16px;
+  border: 1px solid #222;
+  background: #222;
+  color: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 14px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.worksheet-download-btn:hover{
+  background: #ff6a00;
+  border-color: #ff6a00;
+  color: #fff;
+}
+
+.worksheet-table-wrap{
+  width: 100%;
+  overflow-x: auto;
+}
+
+#trial table,
+.worksheet-report-table{
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #f0ddd0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+}
+
+#trial thead th,
+.worksheet-report-table thead th{
+  background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 2px solid #ff7a1a;
+}
+
+#trial tbody td,
+#trial tfoot td,
+.worksheet-report-table tbody td,
+.worksheet-report-table tfoot td{
+  padding: 14px 12px;
+  font-size: 14px;
+  color: #222;
+  border-bottom: 1px solid #f3e2d5;
+  vertical-align: middle;
+  background: #fff;
+}
+
+#trial tbody tr:nth-child(even) td,
+.worksheet-report-table tbody tr:nth-child(even) td{
+  background: #fffaf6;
+}
+
+#trial tbody tr:hover td,
+.worksheet-report-table tbody tr:hover td{
+  background: #fff1e6;
+}
+
+#trial tfoot td,
+.worksheet-report-table tfoot td{
+  background: #fff8f1;
+  font-weight: 800;
+}
+
+.worksheet-report-narrow{
+  max-width: 820px;
+}
+
+.worksheet-status{
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+}
