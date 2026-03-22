@@ -290,7 +290,7 @@ async function sbFetchJournalEntries() {
   const { data, error } = await sb
     .from("journal_entries")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: false });
 
@@ -317,7 +317,7 @@ async function sbFetchJournalLines() {
         remarks
       )
     `)
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: true });
 
@@ -329,22 +329,14 @@ async function sbFetchJournalLines() {
   return (data || []).map(normalizeLine);
 }
 
-async function sbFetchJournalEntryById(id) {
-  if (!currentUser) return null;
-
-  const { data, error } = await sb
-    .from("journal_entries")
-    .select("*")
+async function sbUpdateCOA(id, patch) {
+  const { error } = await sb
+    .from("coa_accounts")
+    .update(patch)
     .eq("id", id)
-    .eq("user_id", currentUser.id)
-    .single();
+    .eq("company_id", COMPANY_ID);
 
-  if (error) {
-    console.error("Entry by ID fetch error:", error);
-    return null;
-  }
-
-  return data;
+  if (error) throw error;
 }
 
 async function sbFetchJournalLinesByJournalId(journal_id) {
@@ -372,7 +364,7 @@ async function sbFetchJournalLinesForEntry(journal_id) {
   const { data, error } = await sb
     .from("journal_lines")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .eq("journal_id", journal_id)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: true });
@@ -397,6 +389,24 @@ async function loadLinesFromDb() {
     console.error("loadLinesFromDb failed:", e);
     return [];
   }
+}
+
+async function sbFetchJournalEntryById(id) {
+  if (!currentUser) return null;
+
+  const { data, error } = await sb
+    .from("journal_entries")
+    .select("*")
+    .eq("id", id)
+    .eq("company_id", COMPANY_ID)
+    .single();
+
+  if (error) {
+    console.error("Entry by ID fetch error:", error);
+    return null;
+  }
+
+  return data;
 }
 
 // ==============================
@@ -514,7 +524,7 @@ async function sbFetchCOA() {
   const { data, error } = await sb
     .from("coa_accounts")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .eq("is_deleted", false)
     .order("code", { ascending: true });
 
@@ -532,21 +542,13 @@ async function sbInsertCOA(row) {
   return data;
 }
 
-async function sbUpdateCOA(id, patch) {
-  const { error } = await sb
-    .from("coa_accounts")
-    .update(patch)
-    .eq("id", id)
-    .eq("user_id", currentUser.id);
-  if (error) throw error;
-}
-
 async function sbSoftDeleteCOA(id) {
   const { error } = await sb
     .from("coa_accounts")
     .update({ is_deleted: true, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", currentUser.id);
+    .eq("company_id", COMPANY_ID);
+
   if (error) throw error;
 }
 
@@ -554,7 +556,7 @@ async function sbSoftDeleteCOA(id) {
 async function sbUpsertCOA(rows) {
   const { error } = await sb
     .from("coa_accounts")
-    .upsert(rows, { onConflict: "user_id,code" });
+    .upsert(rows, { onConflict: "company_id,code" });
   if (error) throw error;
 }
 
@@ -591,14 +593,15 @@ async function seedCOAFromJsonIfNeeded() {
   if (!missing.length) return;
 
   const rows = missing.map((r) => ({
-    user_id: currentUser.id,
-    code: r.code,
-    name: r.name,
-    type: r.type || "Asset",
-    normal: r.normal || "Debit",
-    is_deleted: false,
-  }));
-
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
+  code: r.code,
+  name: r.name,
+  type: r.type || "Asset",
+  normal: r.normal || "Debit",
+  is_deleted: false,
+}));
+  
   try {
     await sbUpsertCOA(rows);
   } catch (e) {
@@ -997,7 +1000,8 @@ window.addCOAAccount = async function addCOAAccount() {
 
   try {
      await sbInsertCOA({
-  user_id: currentUser.id,
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
   code,
   name,
   type,
@@ -1134,8 +1138,9 @@ window.saveJournal = async function () {
     totalDebit += d;
     totalCredit += c;
 
-  lineRows.push({
-  user_id: currentUser.id,
+ lineRows.push({
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
   journal_id: null,
   entry_date,
   ref,
@@ -1155,8 +1160,9 @@ window.saveJournal = async function () {
   const { data: entry, error: entryErr } = await sb
     .from("journal_entries")
     .insert([
-      {
-  user_id: currentUser.id,
+     {
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
   entry_date,
   ref,
   description,
@@ -3480,12 +3486,12 @@ window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
   if (!modal || !linesBody) return alert("History modal not found in HTML.");
 
   // fetch header
-  const { data: entry, error } = await sb
-    .from("journal_entries")
-    .select("*")
-    .eq("id", journal_id)
-    .eq("user_id", currentUser.id)
-    .single();
+ const { data: entry, error } = await sb
+  .from("journal_entries")
+  .select("*")
+  .eq("id", journal_id)
+  .eq("company_id", COMPANY_ID)
+  .single();
 
   if (error) {
     console.error(error);
@@ -3860,15 +3866,16 @@ window.addAccountPopup = async function () {
   if (!normal) return;
 
   try {
-    await sbInsertCOA({
-      user_id: currentUser.id,
-      code,
-      name,
-      type,
-      normal,
-      is_deleted: false,
-    });
-
+   await sbInsertCOA({
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
+  code,
+  name,
+  type,
+  normal,
+  is_deleted: false,
+});
+    
     COA = await sbFetchCOA();
     refreshCoaDatalist();
     resolveLinesAccountIds();
@@ -3929,14 +3936,15 @@ window.saveAddCoaModal = async function () {
   }
 
   try {
-    await sbInsertCOA({
-      user_id: currentUser.id,
-      code,
-      name,
-      type,
-      normal,
-      is_deleted: false,
-    });
+   await sbInsertCOA({
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
+  code,
+  name,
+  type,
+  normal,
+  is_deleted: false,
+});
 
     COA = await sbFetchCOA();
     refreshCoaDatalist();
