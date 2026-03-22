@@ -1814,4 +1814,8 @@ SFP IMPROVEMENT
   color: #fff;
 }
 
-
+#ws-pl tbody tr:last-child td{
+  background: #ffe9d8;
+  font-weight: 800;
+  color: #7a2e0e;
+}
