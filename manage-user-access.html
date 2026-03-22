@@ -7,172 +7,185 @@
   <link rel="stylesheet" href="./css/styles.css" />
 
   <style>
-    .access-page {
-      max-width: 1100px;
-      margin: 40px auto;
-      padding: 24px;
-      background: #fff;
-      border: 1px solid #f0ddd0;
-      border-radius: 20px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-    }
+  .access-page {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 24px;
+    background: #fff;
+    border: 1px solid #f0ddd0;
+    border-radius: 20px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+    overflow: visible;
+  }
 
-    .access-page h1 {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 48px;
-      margin: 0 0 10px;
-      color: #181818;
-    }
+  .access-page h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 48px;
+    margin: 0 0 10px;
+    color: #181818;
+  }
 
-    .access-page p {
-      color: #666;
-      margin-bottom: 24px;
-      font-size: 15px;
-    }
+  .access-page p {
+    color: #666;
+    margin-bottom: 24px;
+    font-size: 15px;
+  }
 
-    .access-topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
+  .access-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
 
-    .access-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+  .access-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 
-    .access-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border: 1px solid #f0ddd0;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-    }
+  .access-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border: 1px solid #f0ddd0;
+    border-radius: 16px;
+    overflow: visible;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  }
 
-    .access-table th {
-      background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 800;
-      text-align: left;
-      padding: 14px 12px;
-      border-bottom: 2px solid #ff7a1a;
-    }
+  .access-table th {
+    background: linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    padding: 14px 12px;
+    border-bottom: 2px solid #ff7a1a;
+  }
 
-    .access-table td {
-      padding: 14px 12px;
-      border-bottom: 1px solid #f3e2d5;
-      font-size: 14px;
-      color: #222;
-      vertical-align: middle;
-    }
+  .access-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #f3e2d5;
+    font-size: 14px;
+    color: #222;
+    vertical-align: middle;
+    overflow: visible;
+  }
 
-    .access-table tbody tr:nth-child(even) {
-      background: #fffaf6;
-    }
+  .access-table tbody tr {
+    position: relative;
+  }
 
-    .status-badge {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
+  .access-table tbody tr:nth-child(even) {
+    background: #fffaf6;
+  }
 
-    .status-active {
-      background: #ecfdf3;
-      color: #027a48;
-      border: 1px solid #abefc6;
-    }
+  .status-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
 
-    .status-disabled {
-      background: #fff1f3;
-      color: #c01048;
-      border: 1px solid #f4b4c2;
-    }
+  .status-active {
+    background: #ecfdf3;
+    color: #027a48;
+    border: 1px solid #abefc6;
+  }
 
-    .perm-badge {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      background: #fff4eb;
-      color: #8a420c;
-      border: 1px solid #f0c3a1;
-    }
+  .status-disabled {
+    background: #fff1f3;
+    color: #c01048;
+    border: 1px solid #f4b4c2;
+  }
 
-    .empty-state {
-      padding: 24px;
-      text-align: center;
-      color: #777;
-      font-size: 14px;
-    }
+  .perm-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #fff4eb;
+    color: #8a420c;
+    border: 1px solid #f0c3a1;
+  }
 
-    .user-action-btn {
-      width: 38px;
-      height: 38px;
-      border: 1px solid #f0c3a1;
-      background: #fff4eb;
-      color: #8a420c;
-      border-radius: 10px;
-      font-size: 20px;
-      font-weight: 700;
-      cursor: pointer;
-    }
+  .empty-state {
+    padding: 24px;
+    text-align: center;
+    color: #777;
+    font-size: 14px;
+  }
 
-    .user-action-btn:hover {
-      background: #ff6a00;
-      border-color: #ff6a00;
-      color: #fff;
-    }
+  .user-action-cell {
+    position: relative;
+    overflow: visible;
+    width: 120px;
+  }
 
-    .user-action-menu {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      min-width: 180px;
-      background: #fff;
-      border: 1px solid #f0ddd0;
-      border-radius: 12px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
-      padding: 6px;
-      z-index: 1000;
-    }
+  .user-action-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #f0c3a1;
+    background: #fff4eb;
+    color: #8a420c;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+  }
 
-    .user-action-menu button {
-      width: 100%;
-      border: none;
-      background: transparent;
-      text-align: left;
-      padding: 10px 12px;
-      border-radius: 8px;
-      color: #222;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+  .user-action-btn:hover {
+    background: #ff6a00;
+    border-color: #ff6a00;
+    color: #fff;
+  }
 
-    .user-action-menu button:hover {
-      background: #fff1e6;
-      color: #8a420c;
-    }
+  .user-action-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 190px;
+    background: #fff;
+    border: 1px solid #f0ddd0;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+    padding: 6px;
+    z-index: 9999;
+  }
 
-    .user-action-menu .danger {
-      color: #b42318;
-    }
+  .user-action-menu button {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #222;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
 
-    .user-action-menu .danger:hover {
-      background: #fff1f1;
-      color: #b42318;
-    }
-  </style>
+  .user-action-menu button:hover {
+    background: #fff1e6;
+    color: #8a420c;
+  }
+
+  .user-action-menu .danger {
+    color: #b42318;
+  }
+
+  .user-action-menu .danger:hover {
+    background: #fff1f1;
+    color: #b42318;
+  }
+</style>
 </head>
 <body>
   <div class="access-page">
@@ -282,7 +295,7 @@
           <td><span class="status-badge ${statusClass}">${esc(statusValue)}</span></td>
           <td><span class="perm-badge">${esc(accessValue)}</span></td>
           <td>${esc(formatLastOnline(user.last_online))}</td>
-          <td style="position:relative;">
+          <td class="user-action-cell">
             <button class="user-action-btn" onclick="toggleUserMenu(event, '${user.id}')">⋯</button>
 
             <div class="user-action-menu" id="user-menu-${user.id}" style="display:none;">
@@ -298,51 +311,54 @@
         tbody.appendChild(tr);
       });
     }
+    
+async function changeUserRole(userId, roleName) {
+  const { error } = await sb
+    .from("user_access")
+    .update({ access_level: roleName })
+    .eq("id", userId);
 
-    async function changeUserRole(userId, roleName) {
-      const { error } = await sb
-        .from("user_access")
-        .update({ access_level: roleName })
-        .eq("id", userId);
+  if (error) {
+    alert(error.message || "Failed to update access level.");
+    return;
+  }
 
-      if (error) {
-        alert(error.message || "Failed to update access level.");
-        return;
-      }
+  closeAllUserMenus();
+  loadUsers();
+}
 
-      loadUsers();
-    }
+async function setUserStatus(userId, newStatus) {
+  const { error } = await sb
+    .from("user_access")
+    .update({ status: newStatus })
+    .eq("id", userId);
 
-    async function setUserStatus(userId, newStatus) {
-      const { error } = await sb
-        .from("user_access")
-        .update({ status: newStatus })
-        .eq("id", userId);
+  if (error) {
+    alert(error.message || "Failed to update status.");
+    return;
+  }
 
-      if (error) {
-        alert(error.message || "Failed to update status.");
-        return;
-      }
+  closeAllUserMenus();
+  loadUsers();
+}
 
-      loadUsers();
-    }
+async function removeUser(userId) {
+  const ok = confirm("Remove this user from user access list?");
+  if (!ok) return;
 
-    async function removeUser(userId) {
-      const ok = confirm("Remove this user from user access list?");
-      if (!ok) return;
+  const { error } = await sb
+    .from("user_access")
+    .delete()
+    .eq("id", userId);
 
-      const { error } = await sb
-        .from("user_access")
-        .delete()
-        .eq("id", userId);
+  if (error) {
+    alert(error.message || "Failed to remove user.");
+    return;
+  }
 
-      if (error) {
-        alert(error.message || "Failed to remove user.");
-        return;
-      }
-
-      loadUsers();
-    }
+  closeAllUserMenus();
+  loadUsers();
+}
 
     loadUsers();
   </script>
