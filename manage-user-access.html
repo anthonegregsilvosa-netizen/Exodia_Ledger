@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Manage User Access</title>
   <link rel="stylesheet" href="./css/styles.css" />
+
   <style>
     .access-page {
       max-width: 1100px;
@@ -107,45 +108,69 @@
       border: 1px solid #f0c3a1;
     }
 
-    .row-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .btn-small {
-      padding: 7px 12px;
-      border-radius: 10px;
-      border: 1px solid #f0c3a1;
-      background: #fff4eb;
-      color: #8a420c;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .btn-small:hover {
-      background: #ff6a00;
-      color: #fff;
-      border-color: #ff6a00;
-    }
-
-    .btn-danger {
-      border-color: #f1b2b2;
-      background: #fff5f5;
-      color: #b42318;
-    }
-
-    .btn-danger:hover {
-      background: #d92d20;
-      border-color: #d92d20;
-      color: #fff;
-    }
-
     .empty-state {
       padding: 24px;
       text-align: center;
       color: #777;
       font-size: 14px;
+    }
+
+    .user-action-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid #f0c3a1;
+      background: #fff4eb;
+      color: #8a420c;
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .user-action-btn:hover {
+      background: #ff6a00;
+      border-color: #ff6a00;
+      color: #fff;
+    }
+
+    .user-action-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #f0ddd0;
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      padding: 6px;
+      z-index: 1000;
+    }
+
+    .user-action-menu button {
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: #222;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .user-action-menu button:hover {
+      background: #fff1e6;
+      color: #8a420c;
+    }
+
+    .user-action-menu .danger {
+      color: #b42318;
+    }
+
+    .user-action-menu .danger:hover {
+      background: #fff1f1;
+      color: #b42318;
     }
   </style>
 </head>
@@ -182,7 +207,6 @@
   <script>
     const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
-
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function formatLastOnline(value) {
@@ -201,28 +225,26 @@
         .replaceAll("'", "&#039;");
     }
 
-    <script>
-function closeAllUserMenus() {
-  document.querySelectorAll(".user-action-menu").forEach(menu => {
-    menu.style.display = "none";
-  });
-}
+    function closeAllUserMenus() {
+      document.querySelectorAll(".user-action-menu").forEach((menu) => {
+        menu.style.display = "none";
+      });
+    }
 
-function toggleUserMenu(event, userId) {
-  event.stopPropagation();
+    function toggleUserMenu(event, userId) {
+      event.stopPropagation();
 
-  const menu = document.getElementById(`user-menu-${userId}`);
-  if (!menu) return;
+      const menu = document.getElementById(`user-menu-${userId}`);
+      if (!menu) return;
 
-  const isOpen = menu.style.display === "block";
-  closeAllUserMenus();
-  menu.style.display = isOpen ? "none" : "block";
-}
+      const isOpen = menu.style.display === "block";
+      closeAllUserMenus();
+      menu.style.display = isOpen ? "none" : "block";
+    }
 
-document.addEventListener("click", function () {
-  closeAllUserMenus();
-});
-</script>
+    document.addEventListener("click", function () {
+      closeAllUserMenus();
+    });
 
     async function loadUsers() {
       const tbody = document.getElementById("user-access-body");
@@ -249,70 +271,53 @@ document.addEventListener("click", function () {
 
       data.forEach((user) => {
         const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
-        const statusClass = user.status === "Active" ? "status-active" : "status-disabled";
-        const toggleLabel = user.status === "Active" ? "Disable" : "Enable";
+        const statusValue = user.status || "Active";
+        const accessValue = user.access_level || "Editor";
+        const statusClass = statusValue === "Active" ? "status-active" : "status-disabled";
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${esc(fullName)}</td>
           <td>${esc(user.email || "")}</td>
-          <td><span class="status-badge ${statusClass}">${esc(user.status || "—")}</span></td>
-          <td><span class="perm-badge">${esc(user.access_level || "Editor")}</span></td>
+          <td><span class="status-badge ${statusClass}">${esc(statusValue)}</span></td>
+          <td><span class="perm-badge">${esc(accessValue)}</span></td>
           <td>${esc(formatLastOnline(user.last_online))}</td>
-         <td style="position:relative;">
-  <button class="user-action-btn" onclick="toggleUserMenu(event, 'USER_ID')">⋯</button>
+          <td style="position:relative;">
+            <button class="user-action-btn" onclick="toggleUserMenu(event, '${user.id}')">⋯</button>
 
-  <div class="user-action-menu" id="user-menu-USER_ID" style="display:none;">
-    <button onclick="changeUserRole('USER_ID', 'admin')">Make Admin</button>
-    <button onclick="changeUserRole('USER_ID', 'editor')">Make Editor</button>
-    <button onclick="changeUserRole('USER_ID', 'viewer')">Make View Only</button>
-    <button onclick="toggleUserStatus('USER_ID', true)">Disable</button>
-    <button onclick="toggleUserStatus('USER_ID', false)">Enable</button>
-    <button class="danger" onclick="removeUser('USER_ID')">Remove</button>
-  </div>
-</td>
+            <div class="user-action-menu" id="user-menu-${user.id}" style="display:none;">
+              <button onclick="changeUserRole('${user.id}', 'Admin')">Make Admin</button>
+              <button onclick="changeUserRole('${user.id}', 'Editor')">Make Editor</button>
+              <button onclick="changeUserRole('${user.id}', 'View Only')">Make View Only</button>
+              <button onclick="setUserStatus('${user.id}', 'Active')">Set Active</button>
+              <button onclick="setUserStatus('${user.id}', 'Disabled')">Set Disabled</button>
+              <button class="danger" onclick="removeUser('${user.id}')">Remove</button>
+            </div>
+          </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-  async function changeUserRole(userId, roleName) {
-  if (!userId || !roleName) return;
-
-  const allowed = ["admin", "editor", "viewer"];
-  if (!allowed.includes(roleName)) {
-    alert("Invalid role.");
-    return;
-  }
-
-  // later this will update Supabase
-  alert(`Change role of ${userId} to ${roleName}`);
-}
-
-    async function editUser(id) {
-      const newAccess = prompt("Enter access level: Editor or View Only", "Editor");
-      if (!newAccess) return;
-
+    async function changeUserRole(userId, roleName) {
       const { error } = await sb
         .from("user_access")
-        .update({ access_level: newAccess })
-        .eq("id", id);
+        .update({ access_level: roleName })
+        .eq("id", userId);
 
       if (error) {
-        alert(error.message || "Failed to update access.");
+        alert(error.message || "Failed to update access level.");
         return;
       }
 
       loadUsers();
     }
 
-    async function toggleUserStatus(id, currentStatus) {
-      const newStatus = currentStatus === "Active" ? "Disabled" : "Active";
-
+    async function setUserStatus(userId, newStatus) {
       const { error } = await sb
         .from("user_access")
         .update({ status: newStatus })
-        .eq("id", id);
+        .eq("id", userId);
 
       if (error) {
         alert(error.message || "Failed to update status.");
@@ -322,14 +327,14 @@ document.addEventListener("click", function () {
       loadUsers();
     }
 
-    async function removeUser(id) {
+    async function removeUser(userId) {
       const ok = confirm("Remove this user from user access list?");
       if (!ok) return;
 
       const { error } = await sb
         .from("user_access")
         .delete()
-        .eq("id", id);
+        .eq("id", userId);
 
       if (error) {
         alert(error.message || "Failed to remove user.");
@@ -343,61 +348,3 @@ document.addEventListener("click", function () {
   </script>
 </body>
 </html>
-
-.user-action-btn{
-  width: 38px;
-  height: 38px;
-  border: 1px solid #f0c3a1;
-  background: #fff4eb;
-  color: #8a420c;
-  border-radius: 10px;
-  font-size: 20px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.user-action-btn:hover{
-  background: #ff6a00;
-  border-color: #ff6a00;
-  color: #fff;
-}
-
-.user-action-menu{
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 180px;
-  background: #fff;
-  border: 1px solid #f0ddd0;
-  border-radius: 12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
-  padding: 6px;
-  z-index: 1000;
-}
-
-.user-action-menu button{
-  width: 100%;
-  border: none;
-  background: transparent;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: #222;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.user-action-menu button:hover{
-  background: #fff1e6;
-  color: #8a420c;
-}
-
-.user-action-menu .danger{
-  color: #b42318;
-}
-
-.user-action-menu .danger:hover{
-  background: #fff1f1;
-  color: #b42318;
-}
