@@ -294,7 +294,7 @@
           <td>${esc(user.email || "")}</td>
           <td><span class="status-badge ${statusClass}">${esc(statusValue)}</span></td>
           <td><span class="perm-badge">${esc(accessValue)}</span></td>
-          <td>${esc(formatLastOnline(user.last_online))}</td>
+          <td>${esc(formatLastOnline(user.last_seen_at))}</td>
           <td class="user-action-cell">
             <button class="user-action-btn" onclick="toggleUserMenu(event, '${user.id}')">⋯</button>
 
