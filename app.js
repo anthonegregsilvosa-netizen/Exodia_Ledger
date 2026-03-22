@@ -57,6 +57,7 @@ let worksheetFilterFrom = "";
 let worksheetFilterTo = "";
 
 let currentManagedUser = null;
+const COMPANY_ID = "exodia-main";
   
 // ==============================
 // AUTH UI helpers
@@ -154,6 +155,29 @@ window.signIn = async function signIn() {
   }
 
   currentUser = data.user;
+
+  const { data: accessRow, error: accessError } = await sb
+    .from("user_access")
+    .select("*")
+    .eq("email", currentUser.email)
+    .single();
+
+  if (accessError || !accessRow) {
+    await sb.auth.signOut();
+    currentUser = null;
+    setAuthMsg("No user access record found. Please contact admin.", true);
+    setUI(false);
+    return;
+  }
+
+  if (String(accessRow.status || "").toLowerCase() === "disabled") {
+    await sb.auth.signOut();
+    currentUser = null;
+    setAuthMsg("Your account is disabled. Please contact admin.", true);
+    setUI(false);
+    return;
+  }
+  
   setAuthMsg("");
   setAuthMsgIn("Logged in ✅");
   setUI(true, currentUser?.email || email);
@@ -266,7 +290,7 @@ async function sbFetchJournalEntries() {
   const { data, error } = await sb
     .from("journal_entries")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: false });
 
@@ -293,7 +317,7 @@ async function sbFetchJournalLines() {
         remarks
       )
     `)
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: true });
 
@@ -330,7 +354,7 @@ async function sbFetchJournalLinesByJournalId(journal_id) {
     .from("journal_lines")
     .select("*")
     .eq("journal_id", journal_id)
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: true });
 
@@ -348,7 +372,7 @@ async function sbFetchJournalLinesForEntry(journal_id) {
   const { data, error } = await sb
     .from("journal_lines")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .eq("journal_id", journal_id)
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("created_at", { ascending: true });
@@ -490,7 +514,7 @@ async function sbFetchCOA() {
   const { data, error } = await sb
     .from("coa_accounts")
     .select("*")
-    .eq("user_id", currentUser.id)
+    .eq("company_id", COMPANY_ID)
     .eq("is_deleted", false)
     .order("code", { ascending: true });
 
@@ -973,7 +997,8 @@ window.addCOAAccount = async function addCOAAccount() {
 
   try {
     await sbInsertCOA({
-      user_id: currentUser.id,
+      company_id: COMPANY_ID,
+      created_by: currentUser.id,
       code,
       name,
       type,
@@ -1111,7 +1136,8 @@ window.saveJournal = async function () {
     totalCredit += c;
 
    lineRows.push({
-  user_id: currentUser.id,
+  company_id: COMPANY_ID,
+  created_by: currentUser.id,
   journal_id: null,
   entry_date,
   ref,
@@ -1132,7 +1158,8 @@ window.saveJournal = async function () {
     .from("journal_entries")
     .insert([
       {
-        user_id: currentUser.id,
+        company_id: COMPANY_ID,
+        created_by: currentUser.id,
         entry_date,
         ref,
         description,
@@ -3527,8 +3554,31 @@ window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
   const { data } = await sb.auth.getSession();
   const session = data.session;
 
-  if (session?.user) {
+    if (session?.user) {
     currentUser = session.user;
+
+    const { data: accessRow, error: accessError } = await sb
+      .from("user_access")
+      .select("*")
+      .eq("email", currentUser.email)
+      .single();
+
+    if (accessError || !accessRow) {
+      await sb.auth.signOut();
+      currentUser = null;
+      setUI(false);
+      setAuthMsg("No user access record found. Please contact admin.", true);
+      return;
+    }
+
+    if (String(accessRow.status || "").toLowerCase() === "disabled") {
+      await sb.auth.signOut();
+      currentUser = null;
+      setUI(false);
+      setAuthMsg("Your account is disabled. Please contact admin.", true);
+      return;
+    }
+
     setUI(true, currentUser.email);
     await initAppAfterLogin();
   } else {
