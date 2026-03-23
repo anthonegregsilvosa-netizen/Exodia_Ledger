@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Access Settings</title>
+  <title>Invite User</title>
   <link rel="stylesheet" href="./css/styles.css" />
   <style>
     body{
@@ -12,13 +12,13 @@
       margin:0;
     }
 
-    .uas-wrap{
-      max-width: 1100px;
+    .invite-wrap{
+      max-width: 760px;
       margin: 40px auto;
       padding: 0 16px;
     }
 
-    .uas-card{
+    .invite-card{
       background:#fff;
       border:1px solid #f0ddd0;
       border-radius:18px;
@@ -26,252 +26,177 @@
       padding:28px;
     }
 
-    .uas-title{
+    .invite-title{
       font-family: Georgia, "Times New Roman", serif;
       font-size: 38px;
       margin: 0 0 8px;
       color:#181818;
     }
 
-    .uas-sub{
+    .invite-sub{
       color:#666;
       margin-bottom:22px;
       font-size:14px;
     }
 
-    .uas-topbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-bottom:18px;
+    .invite-grid{
+      display:grid;
+      gap:14px;
+      max-width: 520px;
     }
 
-    .uas-btn{
-      padding:10px 14px;
+    .invite-grid label{
+      display:grid;
+      gap:6px;
+      font-size:14px;
+      font-weight:600;
+      color:#333;
+    }
+
+    .invite-grid input,
+    .invite-grid select{
+      width:100%;
+      padding:12px 14px;
+      border:1px solid #d8d8d8;
       border-radius:10px;
+      font-size:14px;
+      box-sizing:border-box;
+      background:#fff;
+    }
+
+    .invite-grid input:focus,
+    .invite-grid select:focus{
+      outline:none;
+      border-color:#ff6a00;
+      box-shadow:0 0 0 4px rgba(255,106,0,0.12);
+    }
+
+    .invite-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .invite-btn{
+      padding:12px 16px;
       border:none;
+      border-radius:10px;
       cursor:pointer;
       font-weight:700;
       font-size:14px;
     }
 
-    .uas-btn.primary{
+    .invite-btn.primary{
       background:#ff6a00;
       color:#fff;
     }
 
-    .uas-btn.secondary{
+    .invite-btn.secondary{
       background:#fff4eb;
       color:#8a420c;
       border:1px solid #f0c3a1;
     }
 
-    .uas-table{
-      width:100%;
-      border-collapse:collapse;
-      background:#fff;
-      border:1px solid #f0ddd0;
-      border-radius:14px;
-      overflow:hidden;
-    }
-
-    .uas-table th{
-      background:linear-gradient(180deg, #1c1c1f 0%, #111214 100%);
-      color:#fff;
-      padding:12px 10px;
-      text-align:left;
-      font-size:14px;
-    }
-
-    .uas-table td{
-      padding:12px 10px;
-      border-bottom:1px solid #f3e2d5;
-      font-size:14px;
-      vertical-align:middle;
-    }
-
-    .uas-table tr:nth-child(even) td{
-      background:#fffaf6;
-    }
-
-    .uas-status{
-      font-size:13px;
-      font-weight:700;
-      padding:6px 10px;
-      border-radius:999px;
-      display:inline-block;
-    }
-
-    .uas-status.active{
-      background:#eef9f0;
-      color:#18794e;
-    }
-
-    .uas-status.inactive{
-      background:#fff1f1;
-      color:#b42318;
-    }
-
-    .uas-role{
-      padding:7px 10px;
-      border:1px solid #e7cdb8;
-      border-radius:8px;
-      background:#fff;
-    }
-
-    .uas-action-btn{
-      padding:8px 12px;
-      border:none;
-      border-radius:8px;
-      cursor:pointer;
-      font-weight:700;
-    }
-
-    .uas-action-btn.disable{
-      background:#fff1e6;
-      color:#8a420c;
-      border:1px solid #f0c3a1;
-    }
-
-    .uas-note{
-      margin-top:14px;
+    .invite-note{
+      margin-top:16px;
       font-size:14px;
       color:#555;
+      min-height:20px;
     }
   </style>
 </head>
 <body>
-  <div class="uas-wrap">
-    <div class="uas-card">
-      <div class="uas-topbar">
-        <div>
-          <h1 class="uas-title">User Access Settings</h1>
-          <div class="uas-sub">View and manage user access for your ledger system.</div>
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="uas-btn primary" onclick="goToCreateUser()">Create User</button>
-          <button class="uas-btn secondary" onclick="goBack()">Back</button>
-        </div>
+  <div class="invite-wrap">
+    <div class="invite-card">
+      <h1 class="invite-title">Invite User</h1>
+      <div class="invite-sub">
+        Send an access invitation by email. The user will receive a link to complete account setup.
       </div>
 
-      <table class="uas-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Can Edit</th>
-            <th>Status</th>
-            <th>Last Seen</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="uas-body">
-          <tr>
-            <td colspan="7">Loading users...</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="invite-grid">
+        <label>
+          Email Address
+          <input type="email" id="invite-email" placeholder="name@email.com" />
+        </label>
 
-      <div id="uas-note" class="uas-note"></div>
+        <label>
+          Access Role
+          <select id="invite-role">
+            <option value="Admin">Admin</option>
+            <option value="Editor" selected>Editor</option>
+            <option value="View Only">View Only</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="invite-actions">
+        <button class="invite-btn primary" onclick="sendInvite()">Send Invite</button>
+        <button class="invite-btn secondary" onclick="goBack()">Back</button>
+      </div>
+
+      <div id="invite-note" class="invite-note"></div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function goBack() {
-      window.location.href = "./index.html";
+      window.location.href = "./manage-user-access.html";
     }
 
-    function goToCreateUser() {
-      window.location.href = "./create-user.html";
-    }
+    async function sendInvite() {
+      const note = document.getElementById("invite-note");
+      const email = (document.getElementById("invite-email").value || "").trim();
+      const role = document.getElementById("invite-role").value;
 
-    function fmtDate(v) {
-      if (!v) return "Never";
-      const d = new Date(v);
-      if (isNaN(d.getTime())) return v;
-      return d.toLocaleString();
-    }
-
-    async function loadUsers() {
-      const body = document.getElementById("uas-body");
-      const note = document.getElementById("uas-note");
-
-      body.innerHTML = '<tr><td colspan="7">Loading users...</td></tr>';
-      note.textContent = "";
-
-      const { data, error } = await sb
-        .from("managed_users")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        body.innerHTML = '<tr><td colspan="7">Failed to load users.</td></tr>';
-        note.textContent = error.message || "Unknown error.";
+      if (!email) {
+        note.textContent = "Please enter an email address.";
         return;
       }
 
-      if (!data || data.length === 0) {
-        body.innerHTML = '<tr><td colspan="7">No users found.</td></tr>';
-        return;
+      note.textContent = "Sending invite...";
+
+      try {
+        const { data: sessionData } = await sb.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+
+        if (!accessToken) {
+          note.textContent = "You must be logged in first.";
+          return;
+        }
+
+        const res = await fetch("https://vtglfaeyvmciieuntzhs.functions.supabase.co/invite-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + accessToken
+          },
+          body: JSON.stringify({
+            email,
+            role
+          })
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          note.textContent = result.error || "Failed to send invite.";
+          return;
+        }
+
+        note.textContent = "Invite sent successfully to " + email + ".";
+        document.getElementById("invite-email").value = "";
+        document.getElementById("invite-role").value = "Editor";
+      } catch (err) {
+        console.error(err);
+        note.textContent = "Unexpected error while sending invite.";
       }
-
-      body.innerHTML = "";
-
-      data.forEach((u) => {
-        const tr = document.createElement("tr");
-
-        const fullName = [u.first_name || "", u.last_name || ""].join(" ").trim() || "-";
-
-        tr.innerHTML = `
-          <td>${u.email || ""}</td>
-          <td>${fullName}</td>
-          <td>${u.role_name || "viewer"}</td>
-          <td>${u.can_edit ? "Yes" : "No"}</td>
-          <td>
-            <span class="uas-status ${u.is_active ? "active" : "inactive"}">
-              ${u.is_active ? "Active" : "Inactive"}
-            </span>
-          </td>
-          <td>${fmtDate(u.last_seen_at)}</td>
-          <td>
-            <button class="uas-action-btn disable" onclick="toggleUserStatus('${u.id}', ${u.is_active})">
-              ${u.is_active ? "Disable" : "Enable"}
-            </button>
-          </td>
-        `;
-
-        body.appendChild(tr);
-      });
     }
-
-    async function toggleUserStatus(id, isActive) {
-      const note = document.getElementById("uas-note");
-      note.textContent = "Updating user...";
-
-      const { error } = await sb
-        .from("managed_users")
-        .update({ is_active: !isActive })
-        .eq("id", id);
-
-      if (error) {
-        note.textContent = error.message || "Failed to update user.";
-        return;
-      }
-
-      note.textContent = "User updated successfully.";
-      loadUsers();
-    }
-
-    loadUsers();
   </script>
 </body>
 </html>
