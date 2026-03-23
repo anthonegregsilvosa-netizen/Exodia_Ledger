@@ -12,13 +12,22 @@
 <!-- ========================= AUTH ========================= -->
 <div id="auth-box">
   <div id="auth-logged-out">
-    <input id="auth-email" type="email" placeholder="Email">
-    <input id="auth-pass" type="password" placeholder="Password">
-    <button id="auth-toggle-pass" type="button">👁</button>
-    <button id="auth-login-btn" onclick="signIn()" disabled>Login</button>
-    <span id="auth-msg"></span>
-  </div>
+  <div class="auth-login-card">
+    <h2 class="auth-login-title">Exodia Ledger Login</h2>
 
+    <div class="auth-login-fields">
+      <input id="auth-email" type="email" placeholder="Email">
+
+      <div class="auth-pass-wrap">
+        <input id="auth-pass" type="password" placeholder="Password">
+        <button id="auth-toggle-pass" type="button">👁</button>
+      </div>
+
+      <button id="auth-login-btn" onclick="signIn()" disabled>Login</button>
+      <span id="auth-msg"></span>
+    </div>
+  </div>
+</div>
   <div id="auth-logged-in" class="profile-wrap" style="display:none;">
     <button id="profile-btn" type="button" class="profile-btn" onclick="toggleProfileMenu(event)">
       <img
