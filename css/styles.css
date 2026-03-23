@@ -1856,9 +1856,6 @@ AUTH - CLEAN FINAL
 
 #auth-box{
   position: relative;
-  display: block;
-  justify-content: initial;
-  align-items: initial;
   width: 100%;
   min-height: 100vh;
   padding: 0;
@@ -1869,12 +1866,14 @@ AUTH - CLEAN FINAL
 
 /* logged out = full screen centered login */
 #auth-logged-out{
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   box-sizing: border-box;
+  background: #f5f6f8;
 }
 
 .auth-login-card{
@@ -1885,6 +1884,7 @@ AUTH - CLEAN FINAL
   border-radius: 18px;
   box-shadow: 0 16px 36px rgba(0,0,0,0.12);
   padding: 28px 24px;
+  margin: 0 auto;
 }
 
 .auth-login-title{
