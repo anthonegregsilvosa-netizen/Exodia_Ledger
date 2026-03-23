@@ -2003,3 +2003,20 @@ body{
 #auth-msg-in{
   display: none !important;
 }
+
+.auth-forgot-wrap{
+  text-align:center;
+  margin-top: 2px;
+}
+
+.auth-forgot-link{
+  font-size: 13px;
+  color: #8a420c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-forgot-link:hover{
+  color: #ff6a00;
+  text-decoration: underline;
+}
