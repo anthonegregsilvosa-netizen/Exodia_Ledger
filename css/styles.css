@@ -1855,31 +1855,37 @@ AUTH - CLEAN FINAL
 #auth-logged-out{
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 24px;
   box-sizing: border-box;
-  background: #f5f6f8;
+  background: linear-gradient(135deg, #fff6ef 0%, #ffe2cc 100%);
 }
 
 .auth-login-card{
+  position: relative;
+  z-index: 2;
+
   width: 100%;
   max-width: 380px;
   background: #ffffff;
   border: 1px solid #eadfd6;
-  border-radius: 18px;
-  box-shadow: 0 16px 36px rgba(0,0,0,0.12);
-  padding: 28px 24px;
-  margin: 0 auto;
+  border-radius: 20px;
+
+  box-shadow: 
+    0 20px 50px rgba(0,0,0,0.12),
+    0 4px 12px rgba(255,106,0,0.10);
+
+  padding: 30px 26px;
 }
 
 .auth-login-title{
-  margin: 0 0 18px;
+  margin: 0 0 20px;
   text-align: center;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: #1f1f1f;
+  letter-spacing: -0.3px;
 }
 
 .auth-login-fields{
@@ -1929,18 +1935,19 @@ AUTH - CLEAN FINAL
 
 #auth-login-btn{
   width: 100%;
-  padding: 12px;
-  background: #ff6a00;
+  padding: 13px;
+  background: linear-gradient(135deg, #ff6a00, #ff8a3d);
   border: none;
   color: #fff;
-  font-weight: 700;
-  border-radius: 10px;
+  font-weight: 800;
+  border-radius: 12px;
   cursor: pointer;
-  transition: 0.18s ease;
+  transition: all 0.2s ease;
 }
 
 #auth-login-btn:hover{
-  background: #e45c00;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(255,106,0,0.25);
 }
 
 #auth-login-btn:disabled{
@@ -1965,3 +1972,24 @@ AUTH - CLEAN FINAL
   z-index: 50;
 }
 
+#auth-logged-out::before{
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,106,0,0.25), transparent 70%);
+  top: -150px;
+  right: -150px;
+  z-index: 0;
+}
+
+#auth-logged-out::after{
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255,106,0,0.15), transparent 70%);
+  bottom: -150px;
+  left: -150px;
+  z-index: 0;
+}
