@@ -360,6 +360,9 @@ AUTH BOX
 
 #auth-box{
   position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   padding: 10px 16px;
   margin: 10px;
   border: 1px solid #ccc;
@@ -1961,7 +1964,12 @@ AUTH - CLEAN FINAL
 
 /* logged in = profile at top right */
 #auth-logged-in{
-  display: flex;
-  justify-content: flex-end;
+  display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.profile-wrap{
+  margin-left: auto;
 }
