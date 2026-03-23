@@ -1854,22 +1854,23 @@ WORKSHEET - CLEAN PREMIUM DESIGN
 AUTH - CLEAN FINAL
 ========================= */
 
-/* normal auth container */
 #auth-box{
   position: relative;
-  padding: 10px 16px;
-  margin: 10px;
-  border: 1px solid #ccc;
-  background: #fff;
-  border-radius: 12px;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: #f5f6f8;
 }
 
-/* logged out = center login card only */
+/* logged out = full screen centered login */
 #auth-logged-out{
-  min-height: calc(100vh - 140px);
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .auth-login-card{
@@ -1962,11 +1963,14 @@ AUTH - CLEAN FINAL
   margin-top: 4px;
 }
 
-/* logged in = profile at top right */
+/* logged in = small top bar area only */
 #auth-logged-in{
+  position: absolute;
+  top: 16px;
+  right: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  margin-left: auto;
+  z-index: 50;
 }
 
