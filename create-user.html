@@ -229,7 +229,6 @@
       });
 
       const result = await res.json().catch(() => null);
-
       console.log("HTTP status:", res.status);
       console.log("Invite response body full:", JSON.stringify(result, null, 2));
 
