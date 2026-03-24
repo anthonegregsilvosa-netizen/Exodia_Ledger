@@ -190,18 +190,26 @@
     const email = document.getElementById("mu-email").value.trim();
 
     if (!email) {
-      setStatus("Email and password are required.", true);
+      setStatus("Email is required.", true);
       return;
     }
 
     setStatus("Creating user...");
+
+    const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+
+if (!sessionData.session) {
+  setStatus("You are not logged in.", true);
+  console.log("NO SESSION:", sessionData);
+  return;
+}
 
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+          "Authorization": `Bearer ${sessionData.session.access_token}`
         },
         body: JSON.stringify({
   email,
@@ -215,11 +223,6 @@
 
       if (!res.ok) {
         setStatus(result.error || "Failed to create user.", true);
-        return;
-      }
-
-      if (insertError) {
-        setStatus(insertError.message || "User created in Auth but failed to save in table.", true);
         return;
       }
 
