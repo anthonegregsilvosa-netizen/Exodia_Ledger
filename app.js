@@ -555,6 +555,61 @@ async function sbInsertCOA(row) {
   return data;
 }
 
+async function sbFindCOAByCodeIncludeDeleted(code) {
+  if (!currentUser) return null;
+
+  const { data, error } = await sb
+    .from("coa_accounts")
+    .select("*")
+    .eq("company_id", COMPANY_ID)
+    .eq("code", String(code || "").trim())
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+  return (data && data[0]) ? data[0] : null;
+}
+
+async function sbCreateOrRestoreCOA(row) {
+  const code = String(row.code || "").trim();
+  if (!code) throw new Error("Account code is required.");
+
+  const existing = await sbFindCOAByCodeIncludeDeleted(code);
+
+  // If existing active account already uses this code
+  if (existing && !existing.is_deleted) {
+    const err = new Error(`Code ${code} already exists.`);
+    err.code = "DUPLICATE_ACTIVE_CODE";
+    throw err;
+  }
+
+  // If existing deleted account uses this code, restore it instead of inserting
+  if (existing && existing.is_deleted) {
+    const { data, error } = await sb
+      .from("coa_accounts")
+      .update({
+        name: row.name,
+        type: row.type,
+        normal: row.normal,
+        is_deleted: false,
+        updated_at: new Date().toISOString(),
+        user_id: row.user_id,
+        created_by: row.created_by,
+      })
+      .eq("id", existing.id)
+      .eq("company_id", COMPANY_ID)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return { data, restored: true };
+  }
+
+  // Otherwise insert new
+  const data = await sbInsertCOA(row);
+  return { data, restored: false };
+}
+
 async function sbSoftDeleteCOA(id) {
   const { error } = await sb
     .from("coa_accounts")
@@ -1012,17 +1067,17 @@ window.addCOAAccount = async function addCOAAccount() {
 
   if (!code || !name) return;
 
-  try {
-    await sbInsertCOA({
-  user_id: currentUser.id,
-  company_id: COMPANY_ID,
-  created_by: currentUser.id,
-  code,
-  name,
-  type,
-  normal,
-  is_deleted: false,
-});
+    try {
+    const result = await sbCreateOrRestoreCOA({
+      user_id: currentUser.id,
+      company_id: COMPANY_ID,
+      created_by: currentUser.id,
+      code,
+      name,
+      type,
+      normal,
+      is_deleted: false,
+    });
 
     if (codeEl) codeEl.value = "";
     if (nameEl) nameEl.value = "";
@@ -1038,10 +1093,15 @@ window.addCOAAccount = async function addCOAAccount() {
     renderLedger();
     renderTrialBalance();
 
-    alert("✅ Account added!");
+    alert("✅ Account added successfully!");
   } catch (e) {
     console.error(e);
-    alert("❌ Failed to add account (maybe duplicate code).");
+        if (e?.code === "23505" || e?.code === "DUPLICATE_ACTIVE_CODE") {
+      alert(`❌ Code ${code} already exists.`);
+      return;
+    }
+
+    alert("❌ Failed to add account.");;
   }
 };
 
@@ -3939,17 +3999,17 @@ window.saveAddCoaModal = async function () {
     return;
   }
 
-  try {
-   await sbInsertCOA({
-  user_id: currentUser.id,
-  company_id: COMPANY_ID,
-  created_by: currentUser.id,
-  code,
-  name,
-  type,
-  normal,
-  is_deleted: false,
-});
+    try {
+    const result = await sbCreateOrRestoreCOA({
+      user_id: currentUser.id,
+      company_id: COMPANY_ID,
+      created_by: currentUser.id,
+      code,
+      name,
+      type,
+      normal,
+      is_deleted: false,
+    });
 
     COA = await sbFetchCOA();
     refreshCoaDatalist();
@@ -3969,11 +4029,11 @@ window.saveAddCoaModal = async function () {
   } catch (e) {
     console.error(e);
 
-    if (e?.code === "23505") {
+            if (e?.code === "23505" || e?.code === "DUPLICATE_ACTIVE_CODE") {
       $("addcoa-msg").textContent = `Code ${code} already exists. Please use another code.`;
       return;
     }
-
+      
     $("addcoa-msg").textContent = "Failed to add account. Check your connection/policies.";
   }
 };
