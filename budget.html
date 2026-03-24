@@ -144,6 +144,10 @@
     .mini-link {
       text-decoration: none;
     }
+
+    .budget-top-menu {
+  margin-bottom: 6px;
+}
   </style>
 </head>
 <body>
@@ -163,15 +167,17 @@
     </div>
 
     <nav class="sidebar-links">
-      <a href="./index.html" onclick="closeSidebar()">Accounting Hub</a>
-      <a href="#" onclick="showBudgetSection('create'); closeSidebar(); return false;">Create Budget</a>
-      <a href="#" onclick="showBudgetSection('results'); closeSidebar(); return false;">Budget Results</a>
-    </nav>
+  <a href="./index.html" onclick="closeSidebar()">Accounting Hub</a>
+  <a href="./budget.html" onclick="closeSidebar()">Budget Tracker</a>
+</nav>
   </aside>
 
-  <section class="budget-wrap">
-    <a href="./index.html" class="mini-link">← Back to Accounting Hub</a>
-  </section>
+<section class="budget-wrap">
+  <div class="top-menu budget-top-menu">
+    <button class="top-menu-btn" type="button" onclick="showBudgetSection('create')">Create Budget</button>
+    <button class="top-menu-btn" type="button" onclick="showBudgetSection('results')">Budget Results</button>
+  </div>
+</section>
 
   <section id="budget-create-section" class="budget-wrap">
     <div class="budget-card">
