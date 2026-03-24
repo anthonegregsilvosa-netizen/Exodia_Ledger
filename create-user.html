@@ -153,41 +153,38 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
   const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+  const SUPABASE_ANON_KEY = "sb_publishable_E1idmqAS85V-IVFdOqqV_w_smrIsLuP";
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-(async () => {
-  const { data, error } = await sb.auth.getUser();
-  console.log("Current user:", data);
-  console.log("Current user error:", error);
-})();
-    
+  (async () => {
+    const { data, error } = await sb.auth.getUser();
+    console.log("Current user:", data);
+    console.log("Current user error:", error);
+  })();
+
   async function getAccessToken() {
-  const { data, error } = await sb.auth.getSession();
+    const { data, error } = await sb.auth.getSession();
 
-  console.log("Session data:", data);
-  console.log("Session error:", error);
+    console.log("Session data:", data);
+    console.log("Session error:", error);
 
-  if (error) {
-    alert("Session error: " + error.message);
-    window.location.href = "./index.html";
-    return null;
-  }
+    if (error) {
+      alert("Session error: " + error.message);
+      window.location.href = "./index.html";
+      return null;
+    }
 
-  if (!data || !data.session || !data.session.access_token) {
-    alert("You are not logged in. Please login again.");
-    window.location.href = "./index.html";
-    return null;
-  }
+    if (!data || !data.session || !data.session.access_token) {
+      alert("You are not logged in. Please login again.");
+      window.location.href = "./index.html";
+      return null;
+    }
 
-  console.log("Access token:", data.session.access_token);
-  return data.session.access_token;
-}
-
+    console.log("Access token:", data.session.access_token);
     return data.session.access_token;
   }
 
@@ -232,18 +229,17 @@
       const result = await res.json();
 
       if (!res.ok) {
-  console.log("Invite error response:", result);
-  setStatus((result && result.error) ? result.error : "Failed to send invite.", true);
-  return;
-}
+        console.log("Invite error response:", result);
+        setStatus((result && result.error) ? result.error : "Failed to send invite.", true);
+        return;
+      }
 
       setStatus("✅ Invite sent successfully!");
       document.getElementById("mu-email").value = "";
-
     } catch (err) {
-  console.error("Send invite crashed:", err);
-  setStatus(err && err.message ? err.message : "Unexpected error.", true);
-}
+      console.error("Send invite crashed:", err);
+      setStatus(err && err.message ? err.message : "Unexpected error.", true);
+    }
   }
 </script>
 </body>
