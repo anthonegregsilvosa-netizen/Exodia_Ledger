@@ -168,78 +168,87 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function setStatus(msg, isError = false) {
-    const el = document.getElementById("mu-status");
-    if (!el) return;
-    el.textContent = msg || "";
-    el.style.color = isError ? "crimson" : "#2b2b2b";
-  }
+// check login + get token
+async function getAccessToken() {
+  const { data } = await sb.auth.getSession();
 
-  function goBack() {
+  if (!data.session) {
+    alert("You are not logged in. Please login again.");
     window.location.href = "./index.html";
+    return null;
   }
 
-  async function createManagedUser() {
-    const first_name = document.getElementById("mu-first-name").value.trim();
-    const last_name = document.getElementById("mu-last-name").value.trim();
-    const email = document.getElementById("mu-email").value.trim();
+  return data.session.access_token;
+}
 
-    if (!email) {
-      setStatus("Email is required.", true);
+// status message
+function setStatus(msg, isError = false) {
+  const el = document.getElementById("mu-status");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.color = isError ? "crimson" : "#2b2b2b";
+}
+
+// back button
+function goBack() {
+  window.location.href = "./index.html";
+}
+
+// main function
+async function createManagedUser() {
+  const first_name = document.getElementById("mu-first-name").value.trim();
+  const last_name = document.getElementById("mu-last-name").value.trim();
+  const email = document.getElementById("mu-email").value.trim();
+
+  if (!email) {
+    setStatus("Email is required.", true);
+    return;
+  }
+
+  setStatus("Sending invite...");
+
+  try {
+    const token = await getAccessToken();
+    if (!token) return;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        email,
+        first_name,
+        last_name,
+        access_level: "Editor"
+      })
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      setStatus(result.error || "Failed to send invite.", true);
+      console.log(result);
       return;
     }
 
-    setStatus("Creating user...");
+    setStatus("✅ Invite sent successfully!");
 
-    const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+    document.getElementById("mu-first-name").value = "";
+    document.getElementById("mu-last-name").value = "";
+    document.getElementById("mu-email").value = "";
 
-if (!sessionData.session) {
-  setStatus("You are not logged in.", true);
-  console.log("NO SESSION:", sessionData);
-  return;
-}
-
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionData.session.access_token}`
-        },
-        body: JSON.stringify({
-  email,
-  first_name,
-  last_name,
-  access_level: "Editor"
-})
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        setStatus(result.error || "Failed to create user.", true);
-        return;
-      }
-
-      setStatus("User created successfully.");
-
-      document.getElementById("mu-first-name").value = "";
-      document.getElementById("mu-last-name").value = "";
-      document.getElementById("mu-email").value = "";
-
-      setTimeout(() => {
-        window.location.href = "./manage-user-access.html";
-      }, 800);
-
-    } catch (err) {
-      setStatus(err.message || "Unexpected error.", true);
-    }
+  } catch (err) {
+    setStatus(err.message || "Unexpected error.", true);
+    console.error(err);
   }
+}
 </script>
 </body>
 </html>
