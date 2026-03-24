@@ -161,16 +161,19 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   (async () => {
-    const { data, error } = await sb.auth.getUser();
-    console.log("Current user:", data);
-    console.log("Current user error:", error);
-  })();
+  const { data, error } = await sb.auth.getUser();
+  console.log("Current user email:", data?.user?.email || null);
+  console.log("Current user full:", data);
+  console.log("Current user error:", error);
+})();
 
   async function getAccessToken() {
     const { data, error } = await sb.auth.getSession();
 
-    console.log("Session data:", data);
-    console.log("Session error:", error);
+console.log("Session user email:", data?.session?.user?.email || null);
+console.log("Session access token exists:", !!data?.session?.access_token);
+console.log("Session data:", data);
+console.log("Session error:", error);
 
     if (error) {
       alert("Session error: " + error.message);
