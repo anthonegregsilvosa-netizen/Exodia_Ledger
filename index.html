@@ -84,6 +84,10 @@
 <div id="app" style="display:none;">
 
  <header class="app-header">
+  <div class="app-header-left">
+    <button id="menu-toggle" class="menu-toggle-btn" onclick="toggleSidebar()">☰</button>
+  </div>
+
   <div class="top-menu">
     <button class="top-menu-btn" onclick="show('coa')">Chart of Accounts</button>
     <button class="top-menu-btn" onclick="show('journal')">Journal Entry</button>
@@ -91,6 +95,20 @@
     <button class="top-menu-btn" onclick="show('trial')">Worksheet</button>
   </div>
 </header>
+
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside id="sidebar-menu">
+  <div class="sidebar-header">
+    <strong>Menu</strong>
+    <button type="button" class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+  </div>
+
+  <nav class="sidebar-links">
+    <a href="./index.html" onclick="closeSidebar()">Accounting Hub</a>
+    <a href="./budget.html">Budget Tracker</a>
+  </nav>
+</aside>
 
 <!-- ✅ COA OPTIONS BAR (only show on COA tab via JS) -->
 <div id="coa-toolbar" style="display:none;">
