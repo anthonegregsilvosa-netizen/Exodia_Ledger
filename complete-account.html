@@ -281,7 +281,11 @@
           return;
         }
 
-        const userId = updateData?.user?.id || null;
+                const completedUser = updateData?.user || null;
+        const userId = completedUser?.id || null;
+        const accessLevel =
+          completedUser?.user_metadata?.access_level ||
+          "Editor";
 
         if (userId) {
           const { error: profileError } = await sb
@@ -299,6 +303,32 @@
 
           if (profileError) {
             console.error("Profile upsert error:", profileError);
+          }
+
+          const nameParts = fullName.trim().split(/\s+/);
+          const firstName = nameParts.shift() || "";
+          const lastName = nameParts.join(" ");
+
+          const { error: accessError } = await sb
+            .from("user_access")
+            .upsert(
+              [
+                {
+                  email: invitedEmail,
+                  first_name: firstName,
+                  last_name: lastName,
+                  access_level: accessLevel,
+                  status: "Active",
+                  last_online: null
+                }
+              ],
+              { onConflict: "email" }
+            );
+
+          if (accessError) {
+            console.error("User access upsert error:", accessError);
+            setNote("Account saved, but failed to finish access setup.", true);
+            return;
           }
         }
 
