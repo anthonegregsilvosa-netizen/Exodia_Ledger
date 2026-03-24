@@ -39,6 +39,35 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ==============================
 const $ = (id) => document.getElementById(id);
 
+function showSuccessMessage(message) {
+  let msgBox = document.getElementById("success-message");
+
+  if (!msgBox) {
+    msgBox = document.createElement("div");
+    msgBox.id = "success-message";
+
+    msgBox.style.position = "fixed";
+    msgBox.style.top = "20px";
+    msgBox.style.right = "20px";
+    msgBox.style.background = "#28a745";
+    msgBox.style.color = "#fff";
+    msgBox.style.padding = "10px 16px";
+    msgBox.style.borderRadius = "6px";
+    msgBox.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+    msgBox.style.zIndex = "9999";
+    msgBox.style.fontSize = "14px";
+
+    document.body.appendChild(msgBox);
+  }
+
+  msgBox.textContent = message;
+  msgBox.style.display = "block";
+
+  setTimeout(() => {
+    msgBox.style.display = "none";
+  }, 1000);
+}
+
 // ==============================
 // App state
 // ==============================
@@ -1093,7 +1122,7 @@ window.addCOAAccount = async function addCOAAccount() {
     renderLedger();
     renderTrialBalance();
 
-    alert("✅ Account added successfully!");
+    showSuccessMessage("✅ Account added successfully!");
   } catch (e) {
     console.error(e);
         if (e?.code === "23505" || e?.code === "DUPLICATE_ACTIVE_CODE") {
