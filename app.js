@@ -79,6 +79,26 @@ function showSuccessMessage(message) {
   }, 1000);
 }
 
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  const overlay = document.getElementById("sidebar-overlay");
+
+  if (!sidebar || !overlay) return;
+
+  sidebar.classList.toggle("open");
+  overlay.classList.toggle("show");
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  const overlay = document.getElementById("sidebar-overlay");
+
+  if (!sidebar || !overlay) return;
+
+  sidebar.classList.remove("open");
+  overlay.classList.remove("show");
+}
+
 // ==============================
 // App state
 // ==============================
