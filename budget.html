@@ -8,15 +8,58 @@
 </head>
 <body>
 
-  <div style="padding:20px;">
+  <header class="app-header">
+    <div class="app-header-left">
+      <button id="menu-toggle" class="menu-toggle-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+
+    <div class="top-menu">
+      <button class="top-menu-btn" onclick="window.location.href='./index.html'">Accounting Hub</button>
+      <button class="top-menu-btn" onclick="window.location.href='./budget.html'">Budget Tracker</button>
+    </div>
+  </header>
+
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar-menu">
+    <div class="sidebar-header">
+      <strong>Menu</strong>
+      <button type="button" class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+    </div>
+
+    <nav class="sidebar-links">
+      <a href="./index.html" onclick="closeSidebar()">Accounting Hub</a>
+      <a href="./budget.html" onclick="closeSidebar()">Budget Tracker</a>
+    </nav>
+  </aside>
+
+  <section style="padding:20px;">
     <a href="./index.html" style="text-decoration:none;">← Back to Accounting Hub</a>
-  </div>
+  </section>
 
   <section style="padding:20px;">
     <h2>Budget Tracker</h2>
     <p>This is your new budget page.</p>
     <p>Next step: create budget form, budget list, and budget vs actual.</p>
   </section>
+
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar-menu");
+      const overlay = document.getElementById("sidebar-overlay");
+      if (!sidebar || !overlay) return;
+      sidebar.classList.toggle("open");
+      overlay.classList.toggle("show");
+    }
+
+    function closeSidebar() {
+      const sidebar = document.getElementById("sidebar-menu");
+      const overlay = document.getElementById("sidebar-overlay");
+      if (!sidebar || !overlay) return;
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    }
+  </script>
 
 </body>
 </html>
