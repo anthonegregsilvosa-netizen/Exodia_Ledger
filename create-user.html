@@ -213,18 +213,18 @@
       const result = await res.json();
 
       if (!res.ok) {
-        setStatus(result.error || "Failed to send invite.", true);
-        console.log(result);
-        return;
-      }
+  console.log("Invite error response:", result);
+  setStatus((result && result.error) ? result.error : "Failed to send invite.", true);
+  return;
+}
 
       setStatus("✅ Invite sent successfully!");
       document.getElementById("mu-email").value = "";
 
     } catch (err) {
-      setStatus(err.message || "Unexpected error.", true);
-      console.error(err);
-    }
+  console.error("Send invite crashed:", err);
+  setStatus(err && err.message ? err.message : "Unexpected error.", true);
+}
   }
 </script>
 </body>
