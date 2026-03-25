@@ -219,7 +219,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Z2xmYWV5dm1jaWlldW50emhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2Nzg0NDUsImV4cCI6MjA4NTI1NDQ0NX0.eDOOS3BKKcNOJ_pq5-QpQkW6d1hpp2vdYPsvzzZgZzo";
+    const SUPABASE_ANON_KEY = "sb_publishable_E1idmqAS85V-IVFdOqqV_w_smrIsLuP";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     function formatLastOnline(value) {
@@ -304,7 +304,7 @@
               <button onclick="changeUserRole('${user.id}', 'View Only')">Make View Only</button>
               <button onclick="setUserStatus('${user.id}', 'Active')">Set Active</button>
               <button onclick="setUserStatus('${user.id}', 'Disabled')">Set Disabled</button>
-              <button class="danger" onclick="removeUser('${user.id}')">Remove</button>
+              <button class="danger" onclick="removeUser('${esc(user.auth_user_id || "")}', '${esc(user.email || "")}')">Remove</button>
             </div>
           </td>
         `;
@@ -342,7 +342,7 @@ async function setUserStatus(userId, newStatus) {
   loadUsers();
 }
 
-async function removeUser(user) {
+async function removeUser(authUserId, email) {
   const confirmed = confirm(
     "Delete this account permanently?\n\n" +
     "This will remove the user’s access and permanently delete the account from the system.\n" +
@@ -352,6 +352,11 @@ async function removeUser(user) {
   );
 
   if (!confirmed) return;
+
+  if (!authUserId || !email) {
+    alert("This user cannot be deleted yet because the account ID or email is missing.");
+    return;
+  }
 
   try {
     const {
@@ -371,8 +376,8 @@ async function removeUser(user) {
         "Authorization": `Bearer ${session.access_token}`
       },
       body: JSON.stringify({
-        auth_user_id: user.auth_user_id,
-        email: user.email
+        auth_user_id: authUserId,
+        email: email
       })
     });
 
