@@ -193,6 +193,8 @@
       <div>
         <h1>Manage User Access</h1>
         <p>View users, access level, status, and basic account controls.</p>
+        
+        <div id="manage-status" style="display:none; margin:12px 0; padding:12px 14px; border-radius:10px; font-weight:700;"></div>
       </div>
 
       <div class="access-actions">
@@ -304,7 +306,7 @@
               <button onclick="changeUserRole('${user.id}', 'View Only')">Make View Only</button>
               <button onclick="setUserStatus('${user.id}', 'Active')">Set Active</button>
               <button onclick="setUserStatus('${user.id}', 'Disabled')">Set Disabled</button>
-              <button class="danger" onclick="removeUser('${esc(user.auth_user_id || "")}', '${esc(user.email || "")}')">Remove</button>
+              <button class="danger" onclick="removeUser('${esc(user.auth_user_id || "")}', '${esc(user.email || "")}', this)">Remove</button>
             </div>
           </td>
         `;
@@ -342,7 +344,29 @@ async function setUserStatus(userId, newStatus) {
   loadUsers();
 }
 
-async function removeUser(authUserId, email) {
+    function setManageStatus(message, type = "info") {
+  const box = document.getElementById("manage-status");
+  if (!box) return;
+
+  box.style.display = message ? "block" : "none";
+  box.textContent = message || "";
+
+  if (type === "success") {
+    box.style.background = "#eef9f0";
+    box.style.border = "1px solid #b7e4c0";
+    box.style.color = "#18794e";
+  } else if (type === "error") {
+    box.style.background = "#fff1f1";
+    box.style.border = "1px solid #f0b8b8";
+    box.style.color = "#b42318";
+  } else {
+    box.style.background = "#fff8f1";
+    box.style.border = "1px solid #f3d3bc";
+    box.style.color = "#9a3412";
+  }
+}
+
+async function removeUser(authUserId, email, triggerBtn = null) {
   const confirmed = confirm(
     "Delete this account permanently?\n\n" +
     "This will remove the user’s access and permanently delete the account from the system.\n" +
@@ -353,53 +377,69 @@ async function removeUser(authUserId, email) {
 
   if (!confirmed) return;
 
+  setManageStatus("Deleting account...", "info");
+  
   if (!authUserId || !email) {
     alert("This user cannot be deleted yet because the account ID or email is missing.");
     return;
   }
 
+  const originalText = triggerBtn ? triggerBtn.textContent : "";
+
   try {
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.textContent = "Deleting...";
+      triggerBtn.style.opacity = "0.7";
+      triggerBtn.style.cursor = "wait";
+    }
+
     const {
-  data: refreshData,
-  error: refreshError
-} = await sb.auth.refreshSession();
+      data: refreshData,
+      error: refreshError
+    } = await sb.auth.refreshSession();
 
-const session = refreshData?.session || null;
+    const session = refreshData?.session || null;
 
-console.log("Refresh session:", { session, refreshError });
-console.log("Deleting user:", { authUserId, email });
-
-if (refreshError || !session?.access_token) {
-  alert("Your session expired or is invalid. Please log in again.");
-  window.location.href = "./index.html";
-  return;
-}
-
-    const res = await fetch("https://vtglfaeyvmciieuntzhs.supabase.co/functions/v1/delete-user", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${session.access_token}`
-  },
-  body: JSON.stringify({
-    auth_user_id: authUserId,
-    email: email
-  })
-});
-    
-    const payload = await res.json();
-    console.log("Delete response:", payload);
-
-    if (!res.ok) {
-      alert(payload.error || payload.message || "Failed to delete user.");
+    if (refreshError || !session?.access_token) {
+      alert("Your session expired or is invalid. Please log in again.");
+      window.location.href = "./index.html";
       return;
     }
 
-    alert("User account permanently deleted.");
+    const res = await fetch("https://vtglfaeyvmciieuntzhs.supabase.co/functions/v1/delete-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        auth_user_id: authUserId,
+        email: email
+      })
+    });
+
+    const payload = await res.json();
+
+    if (!res.ok) {
+      setManageStatus(payload.error || payload.message || "Failed to delete user.", "error");
+      return;
+    }
+
+    setManageStatus("User account permanently deleted.", "success");
     await loadUsers();
+
+    setTimeout(() => setManageStatus("", ""), 2000);
   } catch (err) {
     console.error(err);
-    alert("Unexpected error while deleting user.");
+    setManageStatus("Unexpected error while deleting user.", "error");
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = originalText;
+      triggerBtn.style.opacity = "";
+      triggerBtn.style.cursor = "";
+    }
   }
 }
 
