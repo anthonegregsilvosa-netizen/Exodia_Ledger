@@ -577,8 +577,8 @@ async function initializeBudgetPage() {
     showBudgetSection("results");
     alert("✅ Budget saved successfully!");
   } catch (err) {
-    console.error("Failed to save budget:", err);
-    alert("❌ Failed to save budget.");
+    console.error("Budget save error:", err);
+    alert("❌ Failed to save budget: " + (err.message || JSON.stringify(err)));
   }
 }
 
