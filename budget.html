@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./css/styles.css" />
   <style>
     .budget-wrap { padding: 20px; }
+
     .budget-card {
       background: #fff;
       border: 1px solid #ead7c3;
@@ -15,22 +16,26 @@
       margin-bottom: 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
+
     .budget-title {
       margin: 0 0 12px 0;
       font-size: 28px;
       font-weight: 700;
     }
+
     .budget-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 14px;
       margin-bottom: 18px;
     }
+
     .budget-field label {
       display: block;
       font-weight: 600;
       margin-bottom: 6px;
     }
+
     .budget-field input,
     .budget-field select,
     .budget-field textarea {
@@ -42,11 +47,15 @@
       box-sizing: border-box;
       background: #fff;
     }
+
     .budget-field textarea {
       min-height: 90px;
       resize: vertical;
     }
-    .budget-top-menu { margin-bottom: 8px; }
+
+    .budget-top-menu {
+      margin-bottom: 8px;
+    }
 
     .budget-actions {
       display: flex;
@@ -54,6 +63,7 @@
       flex-wrap: wrap;
       margin-top: 16px;
     }
+
     .budget-btn {
       border: 1px solid #d67d1f;
       background: #ff7a00;
@@ -63,23 +73,28 @@
       font-weight: 700;
       cursor: pointer;
     }
+
     .budget-btn.secondary {
       background: #fffaf5;
       color: #7a4a00;
     }
 
-    .budget-hidden { display: none; }
+    .budget-hidden {
+      display: none;
+    }
 
     .budget-table-wrap {
       overflow-x: auto;
       margin-top: 12px;
     }
+
     .budget-table {
       width: 100%;
       border-collapse: collapse;
       background: #fff;
-      min-width: 860px;
+      min-width: 760px;
     }
+
     .budget-table th,
     .budget-table td {
       border: 1px solid #ead7c3;
@@ -87,11 +102,13 @@
       text-align: left;
       vertical-align: middle;
     }
+
     .budget-table th {
       background: #141414;
       color: #fff;
       white-space: nowrap;
     }
+
     .budget-table input {
       width: 100%;
       box-sizing: border-box;
@@ -135,13 +152,57 @@
       padding: 10px 12px;
     }
 
-    .mini-link {
-      text-decoration: none;
-    }
-
     .period-total-row td {
       font-weight: 700;
       background: #fff8ef;
+    }
+
+    .details-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .details-panel.show {
+      display: flex;
+    }
+
+    .details-card {
+      width: min(900px, 100%);
+      max-height: 85vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #ead7c3;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      padding: 20px;
+    }
+
+    .details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .details-close-btn {
+      border: 1px solid #d6a067;
+      background: #fffaf5;
+      color: #7a4a00;
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .mini-link {
+      text-decoration: none;
     }
   </style>
 </head>
@@ -178,13 +239,13 @@
     <div class="budget-card">
       <h2 class="budget-title">Create Budget</h2>
       <p class="budget-muted">
-        Select the department/group and frequency. The system will automatically load the expense lines for you.
+        Enter the budget amount per department/group. Click View Details to see the expense accounts under each one.
       </p>
 
       <div class="budget-grid">
         <div class="budget-field">
           <label for="budget-name">Budget Name</label>
-          <input id="budget-name" type="text" placeholder="Example: Marketing Budget 2026" />
+          <input id="budget-name" type="text" placeholder="Example: Annual Budget 2026" />
         </div>
 
         <div class="budget-field">
@@ -193,30 +254,8 @@
         </div>
 
         <div class="budget-field">
-          <label for="budget-scope">Budget Scope</label>
-          <select id="budget-scope" onchange="handleScopeChange()">
-            <option value="Department">Department</option>
-            <option value="Company-wide">Company-wide</option>
-          </select>
-        </div>
-
-        <div class="budget-field" id="budget-department-field">
-          <label for="budget-department">Department</label>
-          <select id="budget-department" onchange="renderBudgetLines()">
-            <option value="Facilities">Facilities</option>
-            <option value="Finance">Finance</option>
-            <option value="Human Resource">Human Resource</option>
-            <option value="Information Technology">Information Technology</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Operation">Operation</option>
-            <option value="Sales">Sales</option>
-            <option value="Chiefs">Chiefs</option>
-          </select>
-        </div>
-
-        <div class="budget-field">
           <label for="budget-frequency">Frequency</label>
-          <select id="budget-frequency" onchange="renderBudgetLines()">
+          <select id="budget-frequency">
             <option value="Monthly">Monthly</option>
             <option value="Quarterly">Quarterly</option>
             <option value="Semi-Annual">Semi-Annual</option>
@@ -232,8 +271,14 @@
 
       <div class="budget-table-wrap">
         <table class="budget-table">
-          <thead id="budget-table-head"></thead>
-          <tbody id="budget-lines-body"></tbody>
+          <thead>
+            <tr>
+              <th style="width: 40%;">Department / Group</th>
+              <th style="width: 25%;">Budget Amount</th>
+              <th style="width: 35%;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="department-budget-body"></tbody>
         </table>
       </div>
 
@@ -252,94 +297,311 @@
     </div>
   </section>
 
+  <div id="details-panel" class="details-panel" onclick="closeDetailsPanel(event)">
+    <div class="details-card" onclick="event.stopPropagation()">
+      <div class="details-header">
+        <div>
+          <h3 id="details-title" style="margin:0;">Department Details</h3>
+          <div id="details-subtitle" class="budget-muted"></div>
+        </div>
+        <button class="details-close-btn" type="button" onclick="closeDetailsPanel()">Close</button>
+      </div>
+
+      <div class="budget-table-wrap">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th>Expense Name</th>
+            </tr>
+          </thead>
+          <tbody id="details-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script>
     let latestBudgetResult = null;
 
-    const DEPARTMENT_GENERAL_NAMES = {
-      "Facilities": "Facilities Department Expense - General",
-      "Finance": "Finance Department Expense - General",
-      "Human Resource": "Human Resource Department Expense - General",
-      "Information Technology": "Information Technology Department Expense - General",
-      "Marketing": "Marketing Department Expense - General",
-      "Operation": "Operation Department Expense - General",
-      "Sales": "Sales Department Expense - General",
-      "Chiefs": "Chiefs Expense - General"
+    const DEPARTMENT_DETAILS = {
+      "Facilities": [
+        "Facilities Department Expense - General",
+        "FE - Advertising & Marketing",
+        "FE - Meals & Entertainment",
+        "FE - Bank Fees & Charges",
+        "FE - Travel Expense",
+        "FE - Lodging Expense",
+        "FE - Mileage Expense",
+        "FE - Telephone Expense",
+        "FE - Internet & Subscription Expense",
+        "FE - Electricity & Utilities",
+        "FE - Rent Expense",
+        "FE - Janitorial & Cleaning",
+        "FE - Security Services",
+        "FE - Postage & Shipping",
+        "FE - Repairs & Maintenance",
+        "FE - Office Supplies Expense",
+        "FE - Office Equipment Expense",
+        "FE - Depreciation Expense - Office Equipment",
+        "FE - Depreciation Expense - Store Equipment",
+        "FE - Salaries & Wages",
+        "FE - Employee Benefits",
+        "FE - Employee Allowances",
+        "FE - Professional Fees",
+        "FE - Service Fees",
+        "FE - Government Fees & Permits",
+        "FE - Taxes & Licenses",
+        "FE - Parking Fees Expense"
+      ],
+      "Finance": [
+        "Finance Department Expense - General",
+        "Fine - Advertising & Marketing",
+        "Fine - Meals & Entertainment",
+        "Fine - Bank Fees & Charges",
+        "Fine - Travel Expense",
+        "Fine - Lodging Expense",
+        "Fine - Mileage Expense",
+        "Fine - Telephone Expense",
+        "Fine - Internet & Subscription Expense",
+        "Fine - Electricity & Utilities",
+        "Fine - Rent Expense",
+        "Fine - Janitorial & Cleaning",
+        "Fine - Security Services",
+        "Fine - Postage & Shipping",
+        "Fine - Repairs & Maintenance",
+        "Fine - Office Supplies Expense",
+        "Fine - Office Equipment Expense",
+        "Fine - Depreciation Expense - Office Equipment",
+        "Fine - Depreciation Expense - Store Equipment",
+        "Fine - Salaries & Wages",
+        "Fine - Employee Benefits",
+        "Fine - Employee Allowances",
+        "Fine - Professional Fees",
+        "Fine - Service Fees",
+        "Fine - Government Fees & Permits",
+        "Fine - Taxes & Licenses",
+        "Fine - Parking Fees Expense"
+      ],
+      "Human Resource": [
+        "Human Resource Department Expense - General",
+        "HRE - Advertising & Marketing",
+        "HRE - Meals & Entertainment",
+        "HRE - Bank Fees & Charges",
+        "HRE - Travel Expense",
+        "HRE - Lodging Expense",
+        "HRE - Mileage Expense",
+        "HRE - Telephone Expense",
+        "HRE - Internet & Subscription Expense",
+        "HRE - Electricity & Utilities",
+        "HRE - Rent Expense",
+        "HRE - Janitorial & Cleaning",
+        "HRE - Security Services",
+        "HRE - Postage & Shipping",
+        "HRE - Repairs & Maintenance",
+        "HRE - Office Supplies Expense",
+        "HRE - Office Equipment Expense",
+        "HRE - Depreciation Expense - Office Equipment",
+        "HRE - Depreciation Expense - Store Equipment",
+        "HRE - Salaries & Wages",
+        "HRE - Employee Benefits",
+        "HRE - Employee Allowances",
+        "HRE - Professional Fees",
+        "HRE - Service Fees",
+        "HRE - Government Fees & Permits",
+        "HRE - Taxes & Licenses",
+        "HRE - Parking Fees Expense"
+      ],
+      "Information Technology": [
+        "Information Technology Department Expense - General",
+        "ITE - Advertising & Marketing",
+        "ITE - Meals & Entertainment",
+        "ITE - Bank Fees & Charges",
+        "ITE - Travel Expense",
+        "ITE - Lodging Expense",
+        "ITE - Mileage Expense",
+        "ITE - Telephone Expense",
+        "ITE - Internet & Subscription Expense",
+        "ITE - Electricity & Utilities",
+        "ITE - Rent Expense",
+        "ITE - Janitorial & Cleaning",
+        "ITE - Security Services",
+        "ITE - Postage & Shipping",
+        "ITE - Repairs & Maintenance",
+        "ITE - Office Supplies Expense",
+        "ITE - Office Equipment Expense",
+        "ITE - Depreciation Expense - Office Equipment",
+        "ITE - Depreciation Expense - Store Equipment",
+        "ITE - Salaries & Wages",
+        "ITE - Employee Benefits",
+        "ITE - Employee Allowances",
+        "ITE - Professional Fees",
+        "ITE - Service Fees",
+        "ITE - Government Fees & Permits",
+        "ITE - Taxes & Licenses",
+        "ITE - Parking Fees Expense"
+      ],
+      "Marketing": [
+        "Marketing Department Expense - General",
+        "ME - Advertising & Marketing",
+        "ME - Meals & Entertainment",
+        "ME - Bank Fees & Charges",
+        "ME - Travel Expense",
+        "ME - Lodging Expense",
+        "ME - Mileage Expense",
+        "ME - Telephone Expense",
+        "ME - Internet & Subscription Expense",
+        "ME - Electricity & Utilities",
+        "ME - Rent Expense",
+        "ME - Janitorial & Cleaning",
+        "ME - Security Services",
+        "ME - Postage & Shipping",
+        "ME - Repairs & Maintenance",
+        "ME - Office Supplies Expense",
+        "ME - Office Equipment Expense",
+        "ME - Depreciation Expense - Office Equipment",
+        "ME - Depreciation Expense - Store Equipment",
+        "ME - Salaries & Wages",
+        "ME - Employee Benefits",
+        "ME - Employee Allowances",
+        "ME - Professional Fees",
+        "ME - Service Fees",
+        "ME - Government Fees & Permits",
+        "ME - Taxes & Licenses",
+        "ME - Parking Fees Expense"
+      ],
+      "Operation": [
+        "Operation Department Expense - General",
+        "OpEx - Advertising & Marketing",
+        "OpEx - Meals & Entertainment",
+        "OpEx - Bank Fees & Charges",
+        "OpEx - Travel Expense",
+        "OpEx - Lodging Expense",
+        "OpEx - Mileage Expense",
+        "OpEx - Telephone Expense",
+        "OpEx - Internet & Subscription Expense",
+        "OpEx - Electricity & Utilities",
+        "OpEx - Rent Expense",
+        "OpEx - Janitorial & Cleaning",
+        "OpEx - Security Services",
+        "OpEx - Postage & Shipping",
+        "OpEx - Repairs & Maintenance",
+        "OpEx - Office Supplies Expense",
+        "OpEx - Office Equipment Expense",
+        "OpEx - Depreciation Expense - Office Equipment",
+        "OpEx - Depreciation Expense - Store Equipment",
+        "OpEx - Salaries & Wages",
+        "OpEx - Employee Benefits",
+        "OpEx - Employee Allowances",
+        "OpEx - Professional Fees",
+        "OpEx - Service Fees",
+        "OpEx - Government Fees & Permits",
+        "OpEx - Taxes & Licenses",
+        "OpEx - Parking Fees Expense"
+      ],
+      "Sales": [
+        "Sales Department Expense - General",
+        "SE - Advertising & Marketing",
+        "SE - Meals & Entertainment",
+        "SE - Bank Fees & Charges",
+        "SE - Travel Expense",
+        "SE - Lodging Expense",
+        "SE - Mileage Expense",
+        "SE - Telephone Expense",
+        "SE - Internet & Subscription Expense",
+        "SE - Electricity & Utilities",
+        "SE - Rent Expense",
+        "SE - Janitorial & Cleaning",
+        "SE - Security Services",
+        "SE - Postage & Shipping",
+        "SE - Repairs & Maintenance",
+        "SE - Office Supplies Expense",
+        "SE - Office Equipment Expense",
+        "SE - Depreciation Expense - Office Equipment",
+        "SE - Depreciation Expense - Store Equipment",
+        "SE - Salaries & Wages",
+        "SE - Employee Benefits",
+        "SE - Employee Allowances",
+        "SE - Professional Fees",
+        "SE - Service Fees",
+        "SE - Government Fees & Permits",
+        "SE - Taxes & Licenses",
+        "SE - Parking Fees Expense"
+      ],
+      "Chiefs": [
+        "Chiefs Expense - General",
+        "ChiE - Advertising & Marketing",
+        "ChiE - Meals & Entertainment",
+        "ChiE - Bank Fees & Charges",
+        "ChiE - Travel Expense",
+        "ChiE - Lodging Expense",
+        "ChiE - Mileage Expense",
+        "ChiE - Telephone Expense",
+        "ChiE - Internet & Subscription Expense",
+        "ChiE - Electricity & Utilities",
+        "ChiE - Rent Expense",
+        "ChiE - Janitorial & Cleaning",
+        "ChiE - Security Services",
+        "ChiE - Postage & Shipping",
+        "ChiE - Repairs & Maintenance",
+        "ChiE - Office Supplies Expense",
+        "ChiE - Office Equipment Expense",
+        "ChiE - Depreciation Expense - Office Equipment",
+        "ChiE - Depreciation Expense - Store Equipment",
+        "ChiE - Salaries & Wages",
+        "ChiE - Employee Benefits",
+        "ChiE - Employee Allowances",
+        "ChiE - Professional Fees",
+        "ChiE - Service Fees",
+        "ChiE - Government Fees & Permits",
+        "ChiE - Taxes & Licenses",
+        "ChiE - Parking Fees Expense"
+      ],
+      "Company-wide": [
+        "Company Expenses - General",
+        "Advertising & Marketing",
+        "Meals & Entertainment",
+        "Bank Fees & Charges",
+        "Travel Expense",
+        "Lodging Expense",
+        "Mileage Expense",
+        "Telephone Expense",
+        "Internet & Subscription Expense",
+        "Electricity & Utilities",
+        "Rent Expense",
+        "Janitorial & Cleaning",
+        "Security Services",
+        "Office Supplies Expense",
+        "Postage & Shipping",
+        "Repairs & Maintenance",
+        "Depreciation Expense - Office Equipment",
+        "Depreciation Expense - Store Equipment",
+        "Salaries & Wages Expense",
+        "Freelance/Service Expense",
+        "Employee Benefits",
+        "Employee Allowances",
+        "Professional Fees",
+        "Service Fees",
+        "Government Fees & Permits",
+        "Taxes & Licenses",
+        "Parking Fees Expense",
+        "Credit Card Charges",
+        "Bad Debt Expense",
+        "Purchase Discounts",
+        "Automobile Expense",
+        "Training & Development"
+      ]
     };
 
-    const DEPARTMENT_PREFIXES = {
-      "Facilities": "FE - ",
-      "Finance": "Fine - ",
-      "Human Resource": "HRE - ",
-      "Information Technology": "ITE - ",
-      "Marketing": "ME - ",
-      "Operation": "OpEx - ",
-      "Sales": "SE - ",
-      "Chiefs": "ChiE - "
-    };
-
-    const DEPARTMENT_EXPENSE_GROUPS = [
-      "General",
-      "Advertising & Marketing",
-      "Meals & Entertainment",
-      "Bank Fees & Charges",
-      "Travel Expense",
-      "Lodging Expense",
-      "Mileage Expense",
-      "Telephone Expense",
-      "Internet & Subscription Expense",
-      "Electricity & Utilities",
-      "Rent Expense",
-      "Janitorial & Cleaning",
-      "Security Services",
-      "Postage & Shipping",
-      "Repairs & Maintenance",
-      "Office Supplies Expense",
-      "Office Equipment Expense",
-      "Depreciation Expense - Office Equipment",
-      "Depreciation Expense - Store Equipment",
-      "Salaries & Wages",
-      "Employee Benefits",
-      "Employee Allowances",
-      "Professional Fees",
-      "Service Fees",
-      "Government Fees & Permits",
-      "Taxes & Licenses",
-      "Parking Fees Expense"
-    ];
-
-    const COMPANY_WIDE_EXPENSES = [
-      "Company Expenses - General",
-      "Advertising & Marketing",
-      "Meals & Entertainment",
-      "Bank Fees & Charges",
-      "Travel Expense",
-      "Lodging Expense",
-      "Mileage Expense",
-      "Telephone Expense",
-      "Internet & Subscription Expense",
-      "Electricity & Utilities",
-      "Rent Expense",
-      "Janitorial & Cleaning",
-      "Security Services",
-      "Office Supplies Expense",
-      "Postage & Shipping",
-      "Repairs & Maintenance",
-      "Depreciation Expense - Office Equipment",
-      "Depreciation Expense - Store Equipment",
-      "Salaries & Wages Expense",
-      "Freelance/Service Expense",
-      "Employee Benefits",
-      "Employee Allowances",
-      "Professional Fees",
-      "Service Fees",
-      "Government Fees & Permits",
-      "Taxes & Licenses",
-      "Parking Fees Expense",
-      "Credit Card Charges",
-      "Bad Debt Expense",
-      "Purchase Discounts",
-      "Automobile Expense",
-      "Training & Development"
+    const BUDGET_GROUPS = [
+      "Facilities",
+      "Finance",
+      "Human Resource",
+      "Information Technology",
+      "Marketing",
+      "Operation",
+      "Sales",
+      "Chiefs",
+      "Company-wide"
     ];
 
     function toggleSidebar() {
@@ -378,88 +640,28 @@
       });
     }
 
-    function getPeriodsByFrequency(freq) {
-      if (freq === "Monthly") {
-        return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      }
-      if (freq === "Quarterly") {
-        return ["Q1", "Q2", "Q3", "Q4"];
-      }
-      if (freq === "Semi-Annual") {
-        return ["H1", "H2"];
-      }
-      return ["Year"];
-    }
-
-    function getDepartmentExpenseNames(department) {
-      const prefix = DEPARTMENT_PREFIXES[department] || "";
-      const generalName = DEPARTMENT_GENERAL_NAMES[department] || `${department} Department Expense - General`;
-
-      return DEPARTMENT_EXPENSE_GROUPS.map(group => {
-        if (group === "General") return generalName;
-        return `${prefix}${group}`;
-      });
-    }
-
-    function getSelectedExpenseNames() {
-      const scope = document.getElementById("budget-scope").value;
-      const department = document.getElementById("budget-department").value;
-
-      if (scope === "Company-wide") {
-        return COMPANY_WIDE_EXPENSES;
-      }
-
-      return getDepartmentExpenseNames(department);
-    }
-
-    function handleScopeChange() {
-      const scope = document.getElementById("budget-scope").value;
-      const deptField = document.getElementById("budget-department-field");
-
-      if (scope === "Company-wide") {
-        deptField.style.display = "none";
-      } else {
-        deptField.style.display = "block";
-      }
-
-      renderBudgetLines();
-    }
-
-    function renderBudgetLines() {
-      const freq = document.getElementById("budget-frequency").value;
-      const periods = getPeriodsByFrequency(freq);
-      const expenses = getSelectedExpenseNames();
-
-      const thead = document.getElementById("budget-table-head");
-      const tbody = document.getElementById("budget-lines-body");
-
-      thead.innerHTML = "";
+    function renderDepartmentBudgetRows() {
+      const tbody = document.getElementById("department-budget-body");
       tbody.innerHTML = "";
 
-      const headRow = document.createElement("tr");
-      headRow.innerHTML = `
-        <th style="min-width:260px;">Expense Name</th>
-        ${periods.map(p => `<th>${p}</th>`).join("")}
-      `;
-      thead.appendChild(headRow);
-
-      expenses.forEach((expenseName, rowIndex) => {
+      BUDGET_GROUPS.forEach((group, index) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${escapeHtml(expenseName)}</td>
-          ${periods.map((p, periodIndex) => `
-            <td>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                data-row-index="${rowIndex}"
-                data-period="${escapeAttr(p)}"
-                class="budget-amount-input"
-              />
-            </td>
-          `).join("")}
+          <td>${escapeHtml(group)}</td>
+          <td>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              class="department-budget-input"
+              data-group-index="${index}"
+              oninput="updateGrandTotal()"
+            />
+          </td>
+          <td>
+            <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(group)}')">View Details</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -467,38 +669,49 @@
       const totalRow = document.createElement("tr");
       totalRow.className = "period-total-row";
       totalRow.innerHTML = `
-        <td>Total</td>
-        ${periods.map(p => `<td id="period-total-${slugify(p)}" style="text-align:right;">0.00</td>`).join("")}
+        <td>Grand Total</td>
+        <td id="grand-total-cell" style="text-align:right;">0.00</td>
+        <td></td>
       `;
       tbody.appendChild(totalRow);
 
-      document.querySelectorAll(".budget-amount-input").forEach(input => {
-        input.addEventListener("input", updatePeriodTotals);
-      });
-
-      updatePeriodTotals();
+      updateGrandTotal();
     }
 
-    function updatePeriodTotals() {
-      const freq = document.getElementById("budget-frequency").value;
-      const periods = getPeriodsByFrequency(freq);
-
-      periods.forEach(period => {
-        let total = 0;
-        document.querySelectorAll(`.budget-amount-input[data-period="${period}"]`).forEach(input => {
-          total += Number(input.value || 0);
-        });
-
-        const totalCell = document.getElementById(`period-total-${slugify(period)}`);
-        if (totalCell) totalCell.textContent = formatMoney(total);
+    function updateGrandTotal() {
+      let total = 0;
+      document.querySelectorAll(".department-budget-input").forEach(input => {
+        total += Number(input.value || 0);
       });
+
+      const cell = document.getElementById("grand-total-cell");
+      if (cell) cell.textContent = formatMoney(total);
+    }
+
+    function openDetailsPanel(groupName) {
+      const panel = document.getElementById("details-panel");
+      const title = document.getElementById("details-title");
+      const subtitle = document.getElementById("details-subtitle");
+      const body = document.getElementById("details-body");
+
+      const items = DEPARTMENT_DETAILS[groupName] || [];
+
+      title.textContent = `${groupName} Details`;
+      subtitle.textContent = "Expense accounts under this department/group";
+      body.innerHTML = items.map(name => `<tr><td>${escapeHtml(name)}</td></tr>`).join("");
+
+      panel.classList.add("show");
+    }
+
+    function closeDetailsPanel(event) {
+      if (event && event.target && event.target.id !== "details-panel") return;
+      const panel = document.getElementById("details-panel");
+      panel.classList.remove("show");
     }
 
     function createBudgetResult() {
       const budgetName = document.getElementById("budget-name").value.trim();
       const budgetYear = document.getElementById("budget-year").value.trim();
-      const scope = document.getElementById("budget-scope").value;
-      const department = document.getElementById("budget-department").value;
       const frequency = document.getElementById("budget-frequency").value;
       const notes = document.getElementById("budget-notes").value.trim();
 
@@ -507,49 +720,30 @@
         return;
       }
 
-      const periods = getPeriodsByFrequency(frequency);
-      const expenses = getSelectedExpenseNames();
-
-      const lines = expenses.map((expenseName, rowIndex) => {
-        const amounts = {};
-        let lineTotal = 0;
-
-        periods.forEach(period => {
-          const input = document.querySelector(`.budget-amount-input[data-row-index="${rowIndex}"][data-period="${period}"]`);
-          const amount = Number(input?.value || 0);
-          amounts[period] = amount;
-          lineTotal += amount;
-        });
+      const groupBudgets = BUDGET_GROUPS.map((group, index) => {
+        const input = document.querySelector(`.department-budget-input[data-group-index="${index}"]`);
+        const amount = Number(input?.value || 0);
 
         return {
-          expenseName,
-          amounts,
-          total: lineTotal
+          group,
+          amount,
+          details: DEPARTMENT_DETAILS[group] || []
         };
-      }).filter(line => line.total > 0);
+      }).filter(item => item.amount > 0);
 
-      if (!lines.length) {
-        alert("Please enter at least one budget amount.");
+      if (!groupBudgets.length) {
+        alert("Please enter at least one department/group budget amount.");
         return;
       }
 
-      const totalsByPeriod = {};
-      periods.forEach(period => {
-        totalsByPeriod[period] = lines.reduce((sum, line) => sum + Number(line.amounts[period] || 0), 0);
-      });
-
-      const grandTotal = Object.values(totalsByPeriod).reduce((sum, val) => sum + Number(val || 0), 0);
+      const grandTotal = groupBudgets.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
       latestBudgetResult = {
         budgetName,
         budgetYear,
-        scope,
-        department: scope === "Company-wide" ? "Company-wide" : department,
         frequency,
         notes,
-        periods,
-        lines,
-        totalsByPeriod,
+        groupBudgets,
         grandTotal
       };
 
@@ -567,29 +761,15 @@
 
       const r = latestBudgetResult;
 
-      const headHtml = `
+      const bodyHtml = r.groupBudgets.map(item => `
         <tr>
-          <th>Expense Name</th>
-          ${r.periods.map(p => `<th>${escapeHtml(p)}</th>`).join("")}
-          <th>Total</th>
-        </tr>
-      `;
-
-      const bodyHtml = r.lines.map(line => `
-        <tr>
-          <td>${escapeHtml(line.expenseName)}</td>
-          ${r.periods.map(p => `<td style="text-align:right;">${formatMoney(line.amounts[p] || 0)}</td>`).join("")}
-          <td style="text-align:right;">${formatMoney(line.total)}</td>
+          <td>${escapeHtml(item.group)}</td>
+          <td style="text-align:right;">${formatMoney(item.amount)}</td>
+          <td>
+            <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(item.group)}')">View Details</button>
+          </td>
         </tr>
       `).join("");
-
-      const totalRowHtml = `
-        <tr class="period-total-row">
-          <td>Total</td>
-          ${r.periods.map(p => `<td style="text-align:right;">${formatMoney(r.totalsByPeriod[p] || 0)}</td>`).join("")}
-          <td style="text-align:right;">${formatMoney(r.grandTotal)}</td>
-        </tr>
-      `;
 
       box.innerHTML = `
         <div class="budget-result-box">
@@ -597,8 +777,6 @@
 
           <div class="budget-meta">
             <div><strong>Year:</strong><br>${escapeHtml(r.budgetYear)}</div>
-            <div><strong>Scope:</strong><br>${escapeHtml(r.scope)}</div>
-            <div><strong>Department/Group:</strong><br>${escapeHtml(r.department)}</div>
             <div><strong>Frequency:</strong><br>${escapeHtml(r.frequency)}</div>
             <div><strong>Grand Total:</strong><br>${formatMoney(r.grandTotal)}</div>
           </div>
@@ -610,22 +788,25 @@
 
           <div class="budget-table-wrap">
             <table class="budget-table">
-              <thead>${headHtml}</thead>
+              <thead>
+                <tr>
+                  <th>Department / Group</th>
+                  <th>Budget Amount</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
               <tbody>
                 ${bodyHtml}
-                ${totalRowHtml}
+                <tr class="period-total-row">
+                  <td>Grand Total</td>
+                  <td style="text-align:right;">${formatMoney(r.grandTotal)}</td>
+                  <td></td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
       `;
-    }
-
-    function slugify(text) {
-      return String(text || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
     }
 
     function escapeHtml(value) {
@@ -637,12 +818,13 @@
         .replace(/'/g, "&#39;");
     }
 
-    function escapeAttr(value) {
-      return escapeHtml(value);
+    function escapeJs(value) {
+      return String(value ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
     }
 
-    handleScopeChange();
-    renderBudgetLines();
+    renderDepartmentBudgetRows();
   </script>
 
 </body>
