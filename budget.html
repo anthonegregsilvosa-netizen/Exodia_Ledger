@@ -349,8 +349,13 @@ let LIVE_COA = [];
 let DEPARTMENT_DETAILS = {};
 let BUDGET_GROUPS = [];
 
+function normalizeBudgetAccountName(accountName = "") {
+  const raw = String(accountName || "").trim();
+  return raw.replace(/^\d+\s*-\s*/, "").trim();
+}
+
 function getDepartmentGroupFromAccountName(accountName = "") {
-  const name = String(accountName || "").trim();
+  const name = normalizeBudgetAccountName(accountName);
 
   if (!name) return "Company";
 
@@ -466,6 +471,61 @@ async function initializeBudgetPage() {
       });
     }
 
+function getOverallBudgetStatus(startDate, endDate) {
+  const today = new Date();
+  const start = new Date(String(startDate || "") + "T00:00:00");
+  const end = new Date(String(endDate || "") + "T23:59:59");
+
+  if (!startDate || !endDate || isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return "Unknown";
+  }
+
+  if (today < start) return "Upcoming";
+  if (today > end) return "Expired";
+  return "Active";
+}
+
+function getLineStatus(startDate, endDate, remaining) {
+  const base = getOverallBudgetStatus(startDate, endDate);
+  if (Number(remaining || 0) < 0) return "Over Budget";
+  return base === "Active" ? "Within Budget" : base;
+}
+
+async function fetchActualTotalsByGroup(startDate, endDate) {
+  if (!sb) throw new Error("Supabase is not initialized.");
+
+  const { data, error } = await sb
+    .from("journal_lines")
+    .select("entry_date, account_name, debit, credit, company_id, is_deleted")
+    .eq("company_id", "exodia-main")
+    .or("is_deleted.is.null,is_deleted.eq.false")
+    .gte("entry_date", startDate)
+    .lte("entry_date", endDate);
+
+  if (error) throw error;
+
+  const totals = {};
+  BUDGET_GROUPS.forEach(group => {
+    totals[group] = 0;
+  });
+
+  (data || []).forEach(line => {
+    const accountName = String(line.account_name || "").trim();
+    const group = getDepartmentGroupFromAccountName(accountName);
+
+    const debit = Number(line.debit || 0);
+    const credit = Number(line.credit || 0);
+
+    // Expense actual = debit - credit
+    const actual = debit - credit;
+
+    if (!totals[group]) totals[group] = 0;
+    totals[group] += actual;
+  });
+
+  return totals;
+}
+    
     function addMonths(date, months) {
   const d = new Date(date);
   const day = d.getDate();
@@ -610,6 +670,18 @@ const notes = document.getElementById("budget-notes").value.trim();
 
   const grandTotal = groupBudgets.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
+  let actualTotalsByGroup = {};
+let grandActual = 0;
+
+try {
+  actualTotalsByGroup = await fetchActualTotalsByGroup(startDate, endDate);
+  grandActual = Object.values(actualTotalsByGroup).reduce((sum, val) => sum + Number(val || 0), 0);
+} catch (actualErr) {
+  console.error("Failed to fetch actual totals:", actualErr);
+  actualTotalsByGroup = {};
+  grandActual = 0;
+}
+
   try {
     const savedBudget = await saveBudgetToSupabase({
   budgetName,
@@ -629,8 +701,21 @@ const notes = document.getElementById("budget-notes").value.trim();
   startDate,
   endDate,
   notes,
-  groupBudgets,
-  grandTotal
+  groupBudgets: groupBudgets.map(item => {
+    const actual = Number(actualTotalsByGroup[item.group] || 0);
+    const remaining = Number(item.amount || 0) - actual;
+
+    return {
+      ...item,
+      actual,
+      remaining,
+      status: getLineStatus(startDate, endDate, remaining)
+    };
+  }),
+  grandTotal,
+  grandActual,
+  grandRemaining: grandTotal - grandActual,
+  overallStatus: getOverallBudgetStatus(startDate, endDate)
 };
 
     renderBudgetResults();
@@ -687,14 +772,17 @@ const notes = document.getElementById("budget-notes").value.trim();
   const r = latestBudgetResult;
 
   const bodyHtml = r.groupBudgets.map(item => `
-    <tr>
-      <td>${escapeHtml(item.group)}</td>
-      <td style="text-align:right;">${formatMoney(item.amount)}</td>
-      <td>
-        <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(item.group)}')">View Details</button>
-      </td>
-    </tr>
-  `).join("");
+  <tr>
+    <td>${escapeHtml(item.group)}</td>
+    <td style="text-align:right;">${formatMoney(item.amount)}</td>
+    <td style="text-align:right;">${formatMoney(item.actual || 0)}</td>
+    <td style="text-align:right;">${formatMoney(item.remaining || 0)}</td>
+    <td>${escapeHtml(item.status || "-")}</td>
+    <td>
+      <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(item.group)}')">View Details</button>
+    </td>
+  </tr>
+`).join("");
 
   box.innerHTML = `
     <div class="budget-result-box">
@@ -705,7 +793,10 @@ const notes = document.getElementById("budget-notes").value.trim();
 <div><strong>Frequency:</strong><br>${escapeHtml(r.frequency)}</div>
 <div><strong>Start Date:</strong><br>${escapeHtml(r.startDate || "-")}</div>
 <div><strong>End Date:</strong><br>${escapeHtml(r.endDate || "-")}</div>
-<div><strong>Grand Total:</strong><br>${formatMoney(r.grandTotal)}</div>
+<div><strong>Applied Budget:</strong><br>${formatMoney(r.grandTotal)}</div>
+<div><strong>Actual:</strong><br>${formatMoney(r.grandActual || 0)}</div>
+<div><strong>Remaining:</strong><br>${formatMoney(r.grandRemaining || 0)}</div>
+<div><strong>Status:</strong><br>${escapeHtml(r.overallStatus || "-")}</div>
       </div>
 
       <div style="margin-bottom:16px;">
@@ -716,19 +807,25 @@ const notes = document.getElementById("budget-notes").value.trim();
       <div class="budget-table-wrap">
         <table class="budget-table">
           <thead>
-            <tr>
-              <th>Department / Group</th>
-              <th>Budget Amount</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+  <tr>
+    <th>Department / Group</th>
+    <th>Applied</th>
+    <th>Actual</th>
+    <th>Remaining</th>
+    <th>Status</th>
+    <th>Action</th>
+  </tr>
+</thead>
           <tbody>
             ${bodyHtml}
             <tr class="period-total-row">
-              <td>Grand Total</td>
-              <td style="text-align:right;">${formatMoney(r.grandTotal)}</td>
-              <td></td>
-            </tr>
+  <td>Grand Total</td>
+  <td style="text-align:right;">${formatMoney(r.grandTotal)}</td>
+  <td style="text-align:right;">${formatMoney(r.grandActual || 0)}</td>
+  <td style="text-align:right;">${formatMoney(r.grandRemaining || 0)}</td>
+  <td>${escapeHtml(r.overallStatus || "-")}</td>
+  <td></td>
+</tr>
           </tbody>
         </table>
       </div>
