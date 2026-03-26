@@ -5,9 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Exodia Ledger Test</title>
   <link rel="stylesheet" href="./css/styles.css" />
+
+<style>
+  body.auth-loading #auth-box,
+  body.auth-loading #app {
+    display: none !important;
+  }
+
+  #boot-screen {
+    display: none;
+  }
+
+  body.auth-loading #boot-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #fff6ef 0%, #ffe2cc 100%);
+    color: #8a420c;
+    font-size: 18px;
+    font-weight: 700;
+  }
+</style>
 </head>
 
-<body>
+<body class="auth-loading">
+
+<div id="boot-screen">Loading Exodia Finance...</div>
 
 <!-- ========================= AUTH ========================= -->
 <div id="auth-box">
