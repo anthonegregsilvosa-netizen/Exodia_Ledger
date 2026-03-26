@@ -3697,45 +3697,53 @@ window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
 // Restore session on refresh
 // ==============================
 (async function restoreSession() {
-  initPasswordToggle();
+  try {
+    initPasswordToggle();
 
-  $("auth-email")?.addEventListener("input", refreshLoginButtonState);
-  $("auth-pass")?.addEventListener("input", refreshLoginButtonState);
-  refreshLoginButtonState();
+    $("auth-email")?.addEventListener("input", refreshLoginButtonState);
+    $("auth-pass")?.addEventListener("input", refreshLoginButtonState);
+    refreshLoginButtonState();
 
-  const { data } = await sb.auth.getSession();
-  const session = data.session;
+    const { data } = await sb.auth.getSession();
+    const session = data.session;
 
     if (session?.user) {
-    currentUser = session.user;
+      currentUser = session.user;
 
-    const { data: accessRow, error: accessError } = await sb
-      .from("user_access")
-      .select("*")
-      .eq("email", currentUser.email)
-      .single();
+      const { data: accessRow, error: accessError } = await sb
+        .from("user_access")
+        .select("*")
+        .eq("email", currentUser.email)
+        .single();
 
-    if (accessError || !accessRow) {
-      await sb.auth.signOut();
-      currentUser = null;
+      if (accessError || !accessRow) {
+        await sb.auth.signOut();
+        currentUser = null;
+        setUI(false);
+        setAuthMsg("No user access record found. Please contact admin.", true);
+        return;
+      }
+
+      if (String(accessRow.status || "").toLowerCase() === "disabled") {
+        await sb.auth.signOut();
+        currentUser = null;
+        setUI(false);
+        setAuthMsg("Your account is disabled. Please contact admin.", true);
+        return;
+      }
+
+      setUI(true, currentUser.email);
+      await initAppAfterLogin();
+    } else {
       setUI(false);
-      setAuthMsg("No user access record found. Please contact admin.", true);
-      return;
     }
-
-    if (String(accessRow.status || "").toLowerCase() === "disabled") {
-      await sb.auth.signOut();
-      currentUser = null;
-      setUI(false);
-      setAuthMsg("Your account is disabled. Please contact admin.", true);
-      return;
-    }
-
-    setUI(true, currentUser.email);
-    await initAppAfterLogin();
-  } else {
+  } catch (e) {
+    console.error("restoreSession failed:", e);
     setUI(false);
+  } finally {
+    finishAuthBoot();
   }
+})();
   
 })();
 
