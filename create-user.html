@@ -223,9 +223,9 @@
           "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          email,
-          access_level: "Editor"
-        })
+  email,
+  access_level: "editor"
+})
       });
 
       const result = await res.json().catch(() => null);
