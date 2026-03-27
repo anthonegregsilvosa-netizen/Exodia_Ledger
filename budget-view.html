@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Budget View</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .budget-wrap { padding: 12px 20px; }
+
+    .budget-card {
+      background: #fff;
+      border: 1px solid #ead7c3;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .budget-title {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .budget-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 12px 0 18px 0;
+    }
+
+    .budget-meta div {
+      background: #fff;
+      border: 1px solid #ead7c3;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .budget-table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+
+    .budget-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      min-width: 760px;
+    }
+
+    .budget-table th,
+    .budget-table td {
+      border: 1px solid #ead7c3;
+      padding: 10px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .budget-table th {
+      background: #141414;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .budget-btn {
+      border: 1px solid #d67d1f;
+      background: #ff7a00;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .budget-btn.secondary {
+      background: #fffaf5;
+      color: #7a4a00;
+    }
+
+    .period-total-row td {
+      font-weight: 700;
+      background: #fff8ef;
+    }
+
+    .details-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .details-panel.show {
+      display: flex;
+    }
+
+    .details-card {
+      width: min(900px, 100%);
+      max-height: 85vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #ead7c3;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      padding: 20px;
+    }
+
+    .details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .details-close-btn {
+      border: 1px solid #d6a067;
+      background: #fffaf5;
+      color: #7a4a00;
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.28);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+    }
+
+    .loading-overlay.show {
+      display: flex;
+    }
+
+    .loading-box {
+      background: #fff;
+      border: 1px solid #ead7c3;
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      font-weight: 700;
+      min-width: 220px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-left">
+      <button id="menu-toggle" class="menu-toggle-btn" onclick="toggleSidebar()">☰</button>
+    </div>
+  </header>
+
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar-menu">
+    <div class="sidebar-header">
+      <strong>Menu</strong>
+      <button type="button" class="sidebar-close-btn" onclick="closeSidebar()">✕</button>
+    </div>
+
+    <nav class="sidebar-links">
+      <a href="./index.html" onclick="closeSidebar()">Accounting Hub</a>
+      <a href="./budget.html" onclick="closeSidebar()">Budget Tracker</a>
+    </nav>
+  </aside>
+
+  <section class="budget-wrap">
+    <button class="budget-btn secondary" type="button" onclick="window.location.href='./budget.html'">← Back to Budget Results</button>
+  </section>
+
+  <section class="budget-wrap">
+    <div id="budget-view-root" class="budget-card">
+      Loading budget...
+    </div>
+  </section>
+
+  <div id="details-panel" class="details-panel" onclick="closeDetailsPanel(event)">
+    <div class="details-card" onclick="event.stopPropagation()">
+      <div class="details-header">
+        <div>
+          <h3 id="details-title" style="margin:0;">Department Details</h3>
+          <div id="details-subtitle" style="color:#666;font-size:13px;"></div>
+        </div>
+        <button class="details-close-btn" type="button" onclick="closeDetailsPanel()">Close</button>
+      </div>
+
+      <div class="budget-table-wrap">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th>Expense Name</th>
+              <th style="text-align:right;">Actual Amount</th>
+            </tr>
+          </thead>
+          <tbody id="details-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-box" id="loading-text">Loading...</div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://vtglfaeyvmciieuntzhs.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_E1idmqAS85V-IVFdOqqV_w_smrIsLuP";
+
+    let sb = null;
+    let DEPARTMENT_DETAILS = {};
+    let BUDGET_GROUPS = [];
+    let currentBudgetContext = null;
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar-menu");
+      const overlay = document.getElementById("sidebar-overlay");
+      if (!sidebar || !overlay) return;
+      sidebar.classList.toggle("open");
+      overlay.classList.toggle("show");
+    }
+
+    function closeSidebar() {
+      const sidebar = document.getElementById("sidebar-menu");
+      const overlay = document.getElementById("sidebar-overlay");
+      if (!sidebar || !overlay) return;
+      sidebar.classList.remove("open");
+      overlay.classList.remove("show");
+    }
+
+    function showLoading(message = "Loading...") {
+      const overlay = document.getElementById("loading-overlay");
+      const text = document.getElementById("loading-text");
+      if (text) text.textContent = message;
+      if (overlay) overlay.classList.add("show");
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById("loading-overlay");
+      if (overlay) overlay.classList.remove("show");
+    }
+
+    function normalizeBudgetAccountName(accountName = "") {
+      const raw = String(accountName || "").trim();
+      return raw.replace(/^\d+\s*-\s*/, "").trim();
+    }
+
+    function getDepartmentGroupFromAccountName(accountName = "") {
+      const name = normalizeBudgetAccountName(accountName);
+
+      if (!name) return "Company";
+
+      if (name === "Facilities Department Expense - General" || name.startsWith("FE - ")) return "Facilities";
+      if (name === "Finance Department Expense - General" || name.startsWith("Fine - ")) return "Finance";
+      if (name === "Human Resource Department Expense - General" || name.startsWith("HRE - ")) return "Human Resource";
+      if (name === "Information Technology Department Expense - General" || name.startsWith("ITE - ")) return "Information Technology";
+      if (name === "Marketing Department Expense - General" || name.startsWith("ME - ")) return "Marketing";
+      if (name === "Operation Department Expense - General" || name.startsWith("OpEx - ")) return "Operation";
+      if (name === "Sales Department Expense - General" || name.startsWith("SE - ")) return "Sales";
+      if (name === "Chiefs Expense - General" || name.startsWith("ChiE - ")) return "Chiefs";
+
+      return "Company";
+    }
+
+    function buildBudgetGroupsFromCOA(rows) {
+      const grouped = {
+        "Facilities": [],
+        "Finance": [],
+        "Human Resource": [],
+        "Information Technology": [],
+        "Marketing": [],
+        "Operation": [],
+        "Sales": [],
+        "Chiefs": [],
+        "Company": []
+      };
+
+      (rows || []).forEach(row => {
+        const type = String(row.type || "").trim().toLowerCase();
+        const name = String(row.name || row.account_name || "").trim();
+        const isDeleted = row.is_deleted === true;
+
+        if (!name || isDeleted) return;
+        if (type !== "expense") return;
+
+        const group = getDepartmentGroupFromAccountName(name);
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(name);
+      });
+
+      Object.keys(grouped).forEach(group => {
+        grouped[group] = [...new Set(grouped[group])].sort((a, b) => a.localeCompare(b));
+      });
+
+      DEPARTMENT_DETAILS = grouped;
+      BUDGET_GROUPS = Object.keys(grouped).filter(group => grouped[group].length > 0);
+    }
+
+    async function fetchLiveCOA() {
+      const { data, error } = await sb
+        .from("coa_accounts")
+        .select("id, code, name, type, normal, is_deleted, created_at")
+        .order("code", { ascending: true });
+
+      if (error) throw error;
+      buildBudgetGroupsFromCOA(data || []);
+    }
+
+    function formatMoney(value) {
+      return Number(value || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function getOverallBudgetStatus(startDate, endDate) {
+      const today = new Date();
+      const start = new Date(String(startDate || "") + "T00:00:00");
+      const end = new Date(String(endDate || "") + "T23:59:59");
+
+      if (!startDate || !endDate || isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return "Unknown";
+      }
+
+      if (today < start) return "Upcoming";
+      if (today > end) return "Expired";
+      return "Active";
+    }
+
+    function getLineStatus(startDate, endDate, remaining) {
+      const base = getOverallBudgetStatus(startDate, endDate);
+      if (Number(remaining || 0) < 0) return "Over Budget";
+      return base === "Active" ? "Within Budget" : base;
+    }
+
+    async function fetchActualTotalsByGroup(startDate, endDate) {
+      const totals = {};
+      BUDGET_GROUPS.forEach(group => { totals[group] = 0; });
+
+      if (!startDate || !endDate) return totals;
+
+      const { data, error } = await sb
+        .from("journal_lines")
+        .select("entry_date, account_name, debit, credit, company_id, is_deleted")
+        .eq("company_id", "exodia-main")
+        .or("is_deleted.is.null,is_deleted.eq.false")
+        .gte("entry_date", startDate)
+        .lte("entry_date", endDate);
+
+      if (error) throw error;
+
+      const allowedByGroup = {};
+      BUDGET_GROUPS.forEach(group => {
+        allowedByGroup[group] = new Set(
+          (DEPARTMENT_DETAILS[group] || []).map(name => normalizeBudgetAccountName(name))
+        );
+      });
+
+      (data || []).forEach(line => {
+        const normalizedName = normalizeBudgetAccountName(line.account_name || "");
+        const debit = Number(line.debit || 0);
+        const credit = Number(line.credit || 0);
+        const actual = debit - credit;
+
+        for (const group of BUDGET_GROUPS) {
+          if (allowedByGroup[group].has(normalizedName)) {
+            totals[group] += actual;
+            break;
+          }
+        }
+      });
+
+      return totals;
+    }
+
+    async function fetchActualBreakdownByGroup(startDate, endDate, groupName) {
+      if (!startDate || !endDate) return [];
+
+      const { data, error } = await sb
+        .from("journal_lines")
+        .select("entry_date, account_name, debit, credit, company_id, is_deleted")
+        .eq("company_id", "exodia-main")
+        .or("is_deleted.is.null,is_deleted.eq.false")
+        .gte("entry_date", startDate)
+        .lte("entry_date", endDate);
+
+      if (error) throw error;
+
+      const allowedNames = new Set(
+        (DEPARTMENT_DETAILS[groupName] || []).map(name => normalizeBudgetAccountName(name))
+      );
+
+      const breakdown = {};
+
+      (data || []).forEach(line => {
+        const normalizedName = normalizeBudgetAccountName(line.account_name || "");
+        if (!allowedNames.has(normalizedName)) return;
+
+        const debit = Number(line.debit || 0);
+        const credit = Number(line.credit || 0);
+        const actual = debit - credit;
+
+        if (!breakdown[normalizedName]) breakdown[normalizedName] = 0;
+        breakdown[normalizedName] += actual;
+      });
+
+      return Object.entries(breakdown)
+        .map(([expenseName, amount]) => ({ expenseName, amount }))
+        .filter(row => Number(row.amount || 0) !== 0)
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+    }
+
+    async function buildBudgetSummaryFromSavedData(budgetRow, lineRows) {
+      const actualTotalsByGroup = await fetchActualTotalsByGroup(budgetRow.start_date, budgetRow.end_date);
+
+      const groupBudgets = (lineRows || []).map(line => {
+        const applied = Number(line.amount || 0);
+        const actual = Number(actualTotalsByGroup[line.group_name] || 0);
+        const remaining = applied - actual;
+
+        return {
+          group: line.group_name,
+          amount: applied,
+          actual,
+          remaining,
+          status: getLineStatus(budgetRow.start_date, budgetRow.end_date, remaining)
+        };
+      });
+
+      const grandTotal = groupBudgets.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const grandActual = groupBudgets.reduce((sum, item) => sum + Number(item.actual || 0), 0);
+      const grandRemaining = grandTotal - grandActual;
+
+      return {
+        id: budgetRow.id,
+        budgetName: budgetRow.budget_name,
+        budgetYear: budgetRow.budget_year,
+        frequency: budgetRow.frequency,
+        startDate: budgetRow.start_date,
+        endDate: budgetRow.end_date,
+        notes: budgetRow.notes || "",
+        groupBudgets,
+        grandTotal,
+        grandActual,
+        grandRemaining,
+        overallStatus: getOverallBudgetStatus(budgetRow.start_date, budgetRow.end_date)
+      };
+    }
+
+    async function loadBudgetById(budgetId) {
+      const { data: budgetRow, error: budgetError } = await sb
+        .from("budgets")
+        .select("id, budget_name, budget_year, frequency, start_date, end_date, notes, created_at")
+        .eq("id", budgetId)
+        .single();
+
+      if (budgetError) throw budgetError;
+
+      const { data: lines, error: linesError } = await sb
+        .from("budget_lines")
+        .select("budget_id, group_name, amount")
+        .eq("budget_id", budgetId)
+        .order("group_name", { ascending: true });
+
+      if (linesError) throw linesError;
+
+      currentBudgetContext = await buildBudgetSummaryFromSavedData(budgetRow, lines || []);
+    }
+
+    async function openDetailsPanel(groupName) {
+      const panel = document.getElementById("details-panel");
+      const title = document.getElementById("details-title");
+      const subtitle = document.getElementById("details-subtitle");
+      const body = document.getElementById("details-body");
+
+      const startDate = currentBudgetContext?.startDate;
+      const endDate = currentBudgetContext?.endDate;
+
+      title.textContent = `${groupName} Details`;
+      subtitle.textContent = "Expense accounts and actual amounts inside this budget date range";
+      body.innerHTML = `<tr><td colspan="2">Loading...</td></tr>`;
+
+      panel.classList.add("show");
+
+      try {
+        const rows = await fetchActualBreakdownByGroup(startDate, endDate, groupName);
+
+        if (!rows.length) {
+          body.innerHTML = `<tr><td colspan="2">No transactions found for this group in the selected budget period.</td></tr>`;
+          return;
+        }
+
+        body.innerHTML = rows.map(row => `
+          <tr>
+            <td>${escapeHtml(row.expenseName)}</td>
+            <td style="text-align:right;">${formatMoney(row.amount)}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.error("Failed to load detail breakdown:", err);
+        body.innerHTML = `<tr><td colspan="2">Failed to load detail breakdown.</td></tr>`;
+      }
+    }
+
+    function closeDetailsPanel(event) {
+      if (event && event.target && event.target.id !== "details-panel") return;
+      const panel = document.getElementById("details-panel");
+      panel.classList.remove("show");
+    }
+
+    function renderBudgetView() {
+      const root = document.getElementById("budget-view-root");
+      const r = currentBudgetContext;
+
+      if (!r) {
+        root.innerHTML = "Budget not found.";
+        return;
+      }
+
+      const bodyHtml = r.groupBudgets.map(item => `
+        <tr>
+          <td>${escapeHtml(item.group)}</td>
+          <td style="text-align:right;">${formatMoney(item.amount)}</td>
+          <td style="text-align:right;">${formatMoney(item.actual || 0)}</td>
+          <td style="text-align:right;">${formatMoney(item.remaining || 0)}</td>
+          <td>${escapeHtml(item.status || "-")}</td>
+          <td>
+            <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(item.group)}')">View Details</button>
+          </td>
+        </tr>
+      `).join("");
+
+      root.innerHTML = `
+        <h2 class="budget-title">${escapeHtml(r.budgetName)}</h2>
+
+        <div class="budget-meta">
+          <div><strong>Year:</strong><br>${escapeHtml(String(r.budgetYear))}</div>
+          <div><strong>Frequency:</strong><br>${escapeHtml(r.frequency || "-")}</div>
+          <div><strong>Start Date:</strong><br>${escapeHtml(r.startDate || "-")}</div>
+          <div><strong>End Date:</strong><br>${escapeHtml(r.endDate || "-")}</div>
+          <div><strong>Applied Budget:</strong><br>${formatMoney(r.grandTotal || 0)}</div>
+          <div><strong>Actual:</strong><br>${formatMoney(r.grandActual || 0)}</div>
+          <div><strong>Remaining:</strong><br>${formatMoney(r.grandRemaining || 0)}</div>
+          <div><strong>Status:</strong><br>${escapeHtml(r.overallStatus || "-")}</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <strong>Notes:</strong><br>
+          ${escapeHtml(r.notes || "-")}
+        </div>
+
+        <div class="budget-table-wrap">
+          <table class="budget-table">
+            <thead>
+              <tr>
+                <th>Department / Group</th>
+                <th>Applied</th>
+                <th>Actual</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyHtml}
+              <tr class="period-total-row">
+                <td>Grand Total</td>
+                <td style="text-align:right;">${formatMoney(r.grandTotal || 0)}</td>
+                <td style="text-align:right;">${formatMoney(r.grandActual || 0)}</td>
+                <td style="text-align:right;">${formatMoney(r.grandRemaining || 0)}</td>
+                <td>${escapeHtml(r.overallStatus || "-")}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeJs(value) {
+      return String(value ?? "")
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
+    }
+
+    async function initializePage() {
+      try {
+        showLoading("Loading budget...");
+
+        if (!window.supabase || !window.supabase.createClient) {
+          throw new Error("Supabase library not loaded.");
+        }
+
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        await fetchLiveCOA();
+
+        const params = new URLSearchParams(window.location.search);
+        const budgetId = params.get("id");
+
+        if (!budgetId) {
+          throw new Error("Missing budget id.");
+        }
+
+        await loadBudgetById(budgetId);
+        renderBudgetView();
+        hideLoading();
+      } catch (err) {
+        hideLoading();
+        console.error("Budget view init failed:", err);
+        document.getElementById("budget-view-root").innerHTML = "Failed to load budget.";
+      }
+    }
+
+    initializePage();
+  </script>
+</body>
+</html>
