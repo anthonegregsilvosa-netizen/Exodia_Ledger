@@ -122,6 +122,183 @@ let worksheetFilterTo = "";
 let currentManagedUser = null;
 let selectedCOAId = "";
 const COMPANY_ID = "exodia-main";
+
+const INACTIVITY_LIMIT_MS = 3 * 60 * 60 * 1000; // 3 hours
+const MAX_SESSION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+const LAST_ACTIVITY_KEY = "exodiaFinance.lastActivityAt";
+const LOGIN_AT_KEY = "exodiaFinance.loginAt";
+const VERIFY_REQUIRED_KEY = "exodiaFinance.verifyRequired";
+const INACTIVITY_MESSAGE_KEY = "exodiaFinance.showInactivityMessage";
+const REMEMBER_EMAIL_KEY = "exodiaFinance.lastEmail";
+
+let inactivityTimer = null;
+let suppressActivityTracking = false;
+
+function nowMs() {
+  return Date.now();
+}
+
+function markActivity() {
+  if (suppressActivityTracking || !currentUser) return;
+  localStorage.setItem(LAST_ACTIVITY_KEY, String(nowMs()));
+  resetInactivityTimer();
+}
+
+function resetInactivityTimer() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (!currentUser) return;
+
+  const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || nowMs());
+  const elapsed = nowMs() - last;
+  const remaining = INACTIVITY_LIMIT_MS - elapsed;
+
+  if (remaining <= 0) {
+    handleLiveInactivityTimeout();
+    return;
+  }
+
+  inactivityTimer = setTimeout(() => {
+    handleLiveInactivityTimeout();
+  }, remaining);
+}
+
+function startActivityTracking() {
+  stopActivityTracking();
+
+  ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((evt) => {
+    window.addEventListener(evt, markActivity, { passive: true });
+  });
+
+  resetInactivityTimer();
+}
+
+function stopActivityTracking() {
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+
+  ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((evt) => {
+    window.removeEventListener(evt, markActivity, { passive: true });
+  });
+}
+
+function recordFreshLogin(email) {
+  const now = String(nowMs());
+  localStorage.setItem(LOGIN_AT_KEY, now);
+  localStorage.setItem(LAST_ACTIVITY_KEY, now);
+  localStorage.setItem(REMEMBER_EMAIL_KEY, email || "");
+  localStorage.removeItem(VERIFY_REQUIRED_KEY);
+  localStorage.removeItem(INACTIVITY_MESSAGE_KEY);
+}
+
+function clearSessionTimers() {
+  localStorage.removeItem(LAST_ACTIVITY_KEY);
+  localStorage.removeItem(LOGIN_AT_KEY);
+  localStorage.removeItem(VERIFY_REQUIRED_KEY);
+  localStorage.removeItem(INACTIVITY_MESSAGE_KEY);
+}
+
+function showVerifyModal(email) {
+  suppressActivityTracking = true;
+
+  const authBox = $("auth-box");
+  const app = $("app");
+  const modal = $("verify-modal");
+  const emailBox = $("verify-email-display");
+  const pass = $("verify-pass");
+  const msg = $("verify-msg");
+
+  if (authBox) authBox.style.display = "none";
+  if (app) app.style.display = "none";
+  if (modal) modal.style.display = "flex";
+  if (emailBox) emailBox.textContent = email || "";
+  if (pass) pass.value = "";
+  if (msg) msg.textContent = "";
+
+  const toggleBtn = $("verify-toggle-pass");
+  if (toggleBtn && pass) {
+    toggleBtn.onclick = () => {
+      pass.type = pass.type === "password" ? "text" : "password";
+      toggleBtn.textContent = pass.type === "password" ? "👁" : "🙈";
+    };
+  }
+}
+
+function hideVerifyModal() {
+  const modal = $("verify-modal");
+  if (modal) modal.style.display = "none";
+  suppressActivityTracking = false;
+}
+
+async function hardReturnToLogin(showInactivity = false) {
+  stopActivityTracking();
+  hideVerifyModal();
+
+  try {
+    await sb.auth.signOut();
+  } catch (_) {}
+
+  currentUser = null;
+  clearAuthInputs();
+  refreshLoginButtonState();
+  setUI(false);
+
+  if (showInactivity) {
+    setAuthMsg("You were signed out due to inactivity.", true);
+  } else {
+    setAuthMsg("");
+  }
+
+  clearSessionTimers();
+}
+
+async function handleLiveInactivityTimeout() {
+  localStorage.setItem(INACTIVITY_MESSAGE_KEY, "1");
+  await hardReturnToLogin(true);
+}
+
+function shouldRequireVerify() {
+  const loginAt = Number(localStorage.getItem(LOGIN_AT_KEY) || 0);
+  return !!loginAt && nowMs() - loginAt >= MAX_SESSION_MS;
+}
+
+function isPastInactivityLimit() {
+  const last = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+  return !!last && nowMs() - last >= INACTIVITY_LIMIT_MS;
+}
+
+window.goBackToLogin = async function goBackToLogin() {
+  await hardReturnToLogin(false);
+};
+
+window.verifyPasswordOnly = async function verifyPasswordOnly() {
+  const email = localStorage.getItem(REMEMBER_EMAIL_KEY) || currentUser?.email || "";
+  const password = $("verify-pass")?.value || "";
+  const msg = $("verify-msg");
+
+  if (!password) {
+    if (msg) msg.textContent = "Password is required.";
+    return;
+  }
+
+  if (msg) msg.textContent = "Verifying...";
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    if (msg) msg.textContent = error.message || "Verification failed.";
+    return;
+  }
+
+  currentUser = data.user;
+  recordFreshLogin(email);
+  hideVerifyModal();
+  setUI(true, email);
+  await initAppAfterLogin();
+  startActivityTracking();
+};
   
 // ==============================
 // AUTH UI helpers
@@ -255,10 +432,11 @@ window.signIn = async function signIn() {
   }
   
   setAuthMsg("");
-  setUI(true, currentUser?.email || email);
+setUI(true, currentUser?.email || email);
+recordFreshLogin(currentUser?.email || email);
+startActivityTracking();
 
-  await initAppAfterLogin();
-};
+await initAppAfterLogin();
 
 window.signOut = async function signOut() {
   stopActivityTracking();
@@ -3712,69 +3890,27 @@ window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
     $("auth-pass")?.addEventListener("input", refreshLoginButtonState);
     refreshLoginButtonState();
 
+    const { data } = await sb.auth.getSession();
+    const session = data.session;
+
     const rememberedEmail =
-  session?.user?.email ||
-  localStorage.getItem(REMEMBER_EMAIL_KEY) ||
-  "";
-
-if (session?.user) {
-  currentUser = session.user;
-
-  if (shouldRequireVerify()) {
-    localStorage.setItem(VERIFY_REQUIRED_KEY, "1");
-    showVerifyModal(rememberedEmail);
-    return;
-  }
-
-  if (isPastInactivityLimit()) {
-    await hardReturnToLogin(false);
-    return;
-  }
-
-  const { data: accessRow, error: accessError } = await sb
-    .from("user_access")
-    .select("*")
-    .eq("email", currentUser.email)
-    .single();
-
-  if (accessError || !accessRow) {
-    await sb.auth.signOut();
-    currentUser = null;
-    setUI(false);
-    setAuthMsg("No user access record found. Please contact admin.", true);
-    return;
-  }
-
-  if (String(accessRow.status || "").toLowerCase() === "disabled") {
-    await sb.auth.signOut();
-    currentUser = null;
-    setUI(false);
-    setAuthMsg("Your account is disabled. Please contact admin.", true);
-    return;
-  }
-
-  localStorage.setItem(REMEMBER_EMAIL_KEY, currentUser.email || "");
-  if (!localStorage.getItem(LOGIN_AT_KEY)) {
-    localStorage.setItem(LOGIN_AT_KEY, String(nowMs()));
-  }
-  if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
-    localStorage.setItem(LAST_ACTIVITY_KEY, String(nowMs()));
-  }
-
-  setUI(true, currentUser.email);
-  await initAppAfterLogin();
-  startActivityTracking();
-} else {
-  setUI(false);
-
-  if (localStorage.getItem(INACTIVITY_MESSAGE_KEY) === "1") {
-    setAuthMsg("You were signed out due to inactivity.", true);
-    localStorage.removeItem(INACTIVITY_MESSAGE_KEY);
-  }
-}
+      session?.user?.email ||
+      localStorage.getItem(REMEMBER_EMAIL_KEY) ||
+      "";
 
     if (session?.user) {
       currentUser = session.user;
+
+      if (shouldRequireVerify()) {
+        localStorage.setItem(VERIFY_REQUIRED_KEY, "1");
+        showVerifyModal(rememberedEmail);
+        return;
+      }
+
+      if (isPastInactivityLimit()) {
+        await hardReturnToLogin(false);
+        return;
+      }
 
       const { data: accessRow, error: accessError } = await sb
         .from("user_access")
@@ -3798,12 +3934,26 @@ if (session?.user) {
         return;
       }
 
+      localStorage.setItem(REMEMBER_EMAIL_KEY, currentUser.email || "");
+      if (!localStorage.getItem(LOGIN_AT_KEY)) {
+        localStorage.setItem(LOGIN_AT_KEY, String(nowMs()));
+      }
+      if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
+        localStorage.setItem(LAST_ACTIVITY_KEY, String(nowMs()));
+      }
+
       setUI(true, currentUser.email);
       await initAppAfterLogin();
+      startActivityTracking();
     } else {
       setUI(false);
+
+      if (localStorage.getItem(INACTIVITY_MESSAGE_KEY) === "1") {
+        setAuthMsg("You were signed out due to inactivity.", true);
+        localStorage.removeItem(INACTIVITY_MESSAGE_KEY);
+      }
     }
-    } catch (e) {
+  } catch (e) {
     console.error("restoreSession failed:", e);
     setUI(false);
   } finally {
