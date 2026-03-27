@@ -720,7 +720,42 @@ function renderBudgetChart(budgetData) {
       }
     }
 
-    initializePage();
+    async function startBudgetViewApp() {
+  try {
+    if (!window.supabase || !window.supabase.createClient) {
+      throw new Error("Supabase not loaded");
+    }
+
+    const authClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const { data } = await authClient.auth.getSession();
+    const session = data?.session;
+
+    if (!session?.user) {
+      window.location.replace("./index.html");
+      return;
+    }
+
+    // ✅ logged in → continue
+    sb = authClient;
+
+    await fetchLiveCOA();
+
+    const params = new URLSearchParams(window.location.search);
+    const budgetId = params.get("id");
+
+    if (!budgetId) throw new Error("Missing budget id.");
+
+    await loadBudgetById(budgetId);
+    renderBudgetView();
+
+  } catch (err) {
+    console.error("Budget view auth failed:", err);
+    window.location.replace("./index.html");
+  }
+}
+
+startBudgetViewApp();
   </script>
 </body>
 </html>
