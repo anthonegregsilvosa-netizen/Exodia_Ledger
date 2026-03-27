@@ -27,6 +27,108 @@
     font-size: 18px;
     font-weight: 700;
   }
+
+body.auth-loading #auth-box,
+body.auth-loading #app,
+body.auth-loading #verify-modal {
+  display: none !important;
+}
+
+#verify-modal {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fff6ef 0%, #ffe2cc 100%);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.verify-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid #eadfd6;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+  padding: 28px 24px;
+  box-sizing: border-box;
+}
+
+.verify-card h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1f1f1f;
+  text-align: center;
+}
+
+.verify-card p {
+  margin: 0 0 18px;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.verify-email-row {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.verify-email-row label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.verify-email-display {
+  padding: 12px 14px;
+  border: 1px solid #f0ddd0;
+  border-radius: 10px;
+  background: #fff8f2;
+  color: #333;
+  font-size: 14px;
+}
+
+.verify-pass-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.verify-pass-wrap input {
+  width: 100%;
+  padding: 12px 44px 12px 14px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.verify-pass-wrap button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.verify-msg {
+  min-height: 20px;
+  font-size: 14px;
+  color: crimson;
+  margin-bottom: 14px;
+}
+
+.verify-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+  
 </style>
 </head>
 
