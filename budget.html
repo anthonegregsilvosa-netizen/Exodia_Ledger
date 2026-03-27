@@ -572,7 +572,6 @@ async function fetchActualTotalsByGroup(startDate, endDate) {
 
   if (!sb) throw new Error("Supabase is not initialized.");
 
-  // If old saved budgets have no valid dates yet, return zeros safely
   if (!startDate || !endDate) {
     return totals;
   }
@@ -587,21 +586,30 @@ async function fetchActualTotalsByGroup(startDate, endDate) {
 
   if (error) throw error;
 
-  (data || []).forEach(line => {
-    const accountName = String(line.account_name || "").trim();
-    const group = getDepartmentGroupFromAccountName(accountName);
+  const allowedByGroup = {};
+  BUDGET_GROUPS.forEach(group => {
+    allowedByGroup[group] = new Set(
+      (DEPARTMENT_DETAILS[group] || []).map(name => normalizeBudgetAccountName(name))
+    );
+  });
 
+  (data || []).forEach(line => {
+    const normalizedName = normalizeBudgetAccountName(line.account_name || "");
     const debit = Number(line.debit || 0);
     const credit = Number(line.credit || 0);
     const actual = debit - credit;
 
-    if (!totals[group]) totals[group] = 0;
-    totals[group] += actual;
+    for (const group of BUDGET_GROUPS) {
+      if (allowedByGroup[group].has(normalizedName)) {
+        totals[group] += actual;
+        break;
+      }
+    }
   });
 
   return totals;
 }
-
+    
     async function fetchActualBreakdownByGroup(startDate, endDate, groupName) {
   if (!sb) throw new Error("Supabase is not initialized.");
 
@@ -619,15 +627,16 @@ async function fetchActualTotalsByGroup(startDate, endDate) {
 
   if (error) throw error;
 
+  const allowedNames = new Set(
+    (DEPARTMENT_DETAILS[groupName] || []).map(name => normalizeBudgetAccountName(name))
+  );
+
   const breakdown = {};
 
   (data || []).forEach(line => {
-    const accountName = String(line.account_name || "").trim();
-    const group = getDepartmentGroupFromAccountName(accountName);
+    const normalizedName = normalizeBudgetAccountName(line.account_name || "");
+    if (!allowedNames.has(normalizedName)) return;
 
-    if (group !== groupName) return;
-
-    const normalizedName = normalizeBudgetAccountName(accountName);
     const debit = Number(line.debit || 0);
     const credit = Number(line.credit || 0);
     const actual = debit - credit;
@@ -705,8 +714,9 @@ function autoSetEndDate() {
             />
           </td>
           <td>
-            <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(group)}')">View Details</button>
-          </td>
+  <button type="button" class="budget-btn secondary" onclick="openSavedBudget('${escapeJs(item.id)}')">Open</button>
+  <button type="button" class="budget-btn secondary" style="margin-left:8px;" onclick="deleteSavedBudget('${escapeJs(item.id)}')">Delete</button>
+</td>
         `;
         tbody.appendChild(tr);
       });
@@ -1021,6 +1031,45 @@ async function loadAllSavedBudgets() {
       <div id="opened-budget-view" style="margin-top:20px;"></div>
     </div>
   `;
+}
+
+    async function deleteSavedBudget(budgetId) {
+  const confirmed = confirm("Delete this budget?");
+  if (!confirmed) return;
+
+  try {
+    showLoading("Deleting budget...");
+
+    const { error: linesError } = await sb
+      .from("budget_lines")
+      .delete()
+      .eq("budget_id", budgetId);
+
+    if (linesError) throw linesError;
+
+    const { error: budgetError } = await sb
+      .from("budgets")
+      .delete()
+      .eq("id", budgetId);
+
+    if (budgetError) throw budgetError;
+
+    if (currentBudgetContext?.id === budgetId) {
+      currentBudgetContext = null;
+      const container = document.getElementById("opened-budget-view");
+      if (container) container.innerHTML = "";
+    }
+
+    await loadAllSavedBudgets();
+    renderBudgetResults();
+
+    hideLoading();
+    showToast("✅ Budget deleted successfully!");
+  } catch (err) {
+    hideLoading();
+    console.error("Delete budget error:", err);
+    alert("❌ Failed to delete budget: " + (err.message || JSON.stringify(err)));
+  }
 }
 
     function openSavedBudget(budgetId) {
