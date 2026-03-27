@@ -437,6 +437,9 @@ recordFreshLogin(currentUser?.email || email);
 startActivityTracking();
 
 await initAppAfterLogin();
+};
+
+window.signOut = async function signOut() {
 
 window.signOut = async function signOut() {
   stopActivityTracking();
