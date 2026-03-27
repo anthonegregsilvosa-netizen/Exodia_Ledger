@@ -34,6 +34,30 @@
 
 <div id="boot-screen">Loading Exodia Finance...</div>
 
+  <div id="verify-modal" style="display:none;">
+  <div class="verify-card">
+    <h2>Verify Again</h2>
+    <p>Please re-enter your password to continue.</p>
+
+    <div class="verify-email-row">
+      <label>Email</label>
+      <div id="verify-email-display" class="verify-email-display"></div>
+    </div>
+
+    <div class="verify-pass-wrap">
+      <input id="verify-pass" type="password" placeholder="Password" />
+      <button id="verify-toggle-pass" type="button">👁</button>
+    </div>
+
+    <div id="verify-msg" class="verify-msg"></div>
+
+    <div class="verify-actions">
+      <button type="button" class="btn" onclick="goBackToLogin()">Back</button>
+      <button type="button" class="btn-dark" onclick="verifyPasswordOnly()">Continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- ========================= AUTH ========================= -->
 <div id="auth-box">
   <div id="auth-logged-out">
