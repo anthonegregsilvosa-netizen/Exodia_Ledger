@@ -3741,14 +3741,12 @@ window.viewHistoryEntry = async function viewHistoryEntry(journal_id) {
     } else {
       setUI(false);
     }
-  } catch (e) {
+    } catch (e) {
     console.error("restoreSession failed:", e);
     setUI(false);
   } finally {
     finishAuthBoot();
   }
-})();
-  
 })();
 
 // ==============================
