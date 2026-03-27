@@ -695,43 +695,42 @@ function autoSetEndDate() {
 }
 
     function renderDepartmentBudgetRows() {
-      const tbody = document.getElementById("department-budget-body");
-      tbody.innerHTML = "";
+  const tbody = document.getElementById("department-budget-body");
+  tbody.innerHTML = "";
 
-      BUDGET_GROUPS.forEach((group, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${escapeHtml(group)}</td>
-          <td>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              class="department-budget-input"
-              data-group-index="${index}"
-              oninput="updateGrandTotal()"
-            />
-          </td>
-          <td>
-  <button type="button" class="budget-btn secondary" onclick="openSavedBudget('${escapeJs(item.id)}')">Open</button>
-  <button type="button" class="budget-btn secondary" style="margin-left:8px;" onclick="deleteSavedBudget('${escapeJs(item.id)}')">Delete</button>
-</td>
-        `;
-        tbody.appendChild(tr);
-      });
+  BUDGET_GROUPS.forEach((group, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(group)}</td>
+      <td>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          class="department-budget-input"
+          data-group-index="${index}"
+          oninput="updateGrandTotal()"
+        />
+      </td>
+      <td>
+        <button type="button" class="budget-btn secondary" onclick="openDetailsPanel('${escapeJs(group)}')">View Details</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-      const totalRow = document.createElement("tr");
-      totalRow.className = "period-total-row";
-      totalRow.innerHTML = `
-        <td>Grand Total</td>
-        <td id="grand-total-cell" style="text-align:right;">0.00</td>
-        <td></td>
-      `;
-      tbody.appendChild(totalRow);
+  const totalRow = document.createElement("tr");
+  totalRow.className = "period-total-row";
+  totalRow.innerHTML = `
+    <td>Grand Total</td>
+    <td id="grand-total-cell" style="text-align:right;">0.00</td>
+    <td></td>
+  `;
+  tbody.appendChild(totalRow);
 
-      updateGrandTotal();
-    }
+  updateGrandTotal();
+}
 
     function updateGrandTotal() {
       let total = 0;
@@ -996,9 +995,10 @@ async function loadAllSavedBudgets() {
       <td style="text-align:right;">${formatMoney(item.grandActual || 0)}</td>
       <td style="text-align:right;">${formatMoney(item.grandRemaining || 0)}</td>
       <td>${escapeHtml(item.overallStatus || "-")}</td>
-      <td>
-        <button type="button" class="budget-btn secondary" onclick="openSavedBudget('${escapeJs(item.id)}')">Open</button>
-      </td>
+     <td>
+  <button type="button" class="budget-btn secondary" onclick="openSavedBudget('${escapeJs(item.id)}')">Open</button>
+  <button type="button" class="budget-btn secondary" style="margin-left:8px;" onclick="deleteSavedBudget('${escapeJs(item.id)}')">Delete</button>
+</td>
     </tr>
   `).join("");
 
